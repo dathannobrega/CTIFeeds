@@ -1,0 +1,33 @@
+version: '3.9'
+services:
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: ctifeeds
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d ctifeeds']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+  web:
+    build: .
+    command: flask run --host=0.0.0.0 --port=5000
+    ports:
+      - "5000:5000"
+    environment:
+      - DATABASE_URL=postgresql+psycopg2://postgres:postgres@db:5432/ctifeeds
+      - FEED_CONFIG_PATH=/app/config/feeds.yaml
+      - CACHE_DIR=/app/data
+    volumes:
+      - .:/app
+      - cache_data:/app/data
+    depends_on:
+      db:
+        condition: service_healthy
+volumes:
+  pgdata:
+  cache_data:
