@@ -1,0 +1,6 @@
+urls:
+  - https://example.com/feeds/urls.txt
+domains:
+  - https://example.com/feeds/domains.txt
+ipv4:
+  - https://example.com/feeds/ipv4.txt
