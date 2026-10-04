@@ -10,6 +10,14 @@ updates:
         patterns: ['astro', '@astrojs/*']
       minor-and-patch:
         update-types: [minor, patch]
+    ignore:
+      # @astrojs/check 0.9.x declara peer typescript "^5.0.0 || ^6.0.0"; o TS 7 quebra o npm ci.
+      # Remova quando o @astrojs/check aceitar a nova major.
+      - dependency-name: typescript
+        update-types: ['version-update:semver-major']
+      # Tipos do Node alinhados com o runtime fixado no .nvmrc (Node 22).
+      - dependency-name: '@types/node'
+        update-types: ['version-update:semver-major']
   - package-ecosystem: github-actions
     directory: /
     schedule:
