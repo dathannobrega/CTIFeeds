@@ -137,6 +137,35 @@ lá um `LICENSE` (ex.: BSD-2-Clause como a ESET, ou CC0) e use issues/PRs para f
 - **Checklist de pré-publicação** em todo PR (`.github/pull_request_template.md`).
 - Ative *secret scanning* e *push protection* no GitHub (Settings → Code security).
 
+## Deploy: Cloudflare Pages
+
+O site é estático, então funciona igual no Pages: `public/_headers` é suportado nativamente, o
+`404.html` é servido para rotas inexistentes e o Pages ignora o `wrangler.jsonc` (ele não tem
+`pages_build_output_dir`).
+
+**Pelo painel, com deploy a cada push (recomendado):**
+
+1. Cloudflare → Workers & Pages → Create → Pages → *Connect to Git* → repositório `CTIFeeds`.
+2. Branch de produção `main`. Framework preset: *Astro* (ou *None*). Build command `npm run build`.
+   Build output directory `dist`.
+3. Em *Environment variables*, adicione `FORBIDDEN_TERMS` (Production e Preview). Não defina
+   `NODE_VERSION`: o Pages lê o `.nvmrc` (o padrão do build image v3, Node 22.16, é antigo demais
+   para este projeto).
+4. *Save and Deploy*. Cada push na `main` publica; cada PR/branch ganha uma URL de prévia
+   (`<hash>.datan-site.pages.dev`, fora dos buscadores pelo `_headers`).
+5. Domínio: *Custom domains* → *Set up a custom domain* → `www.datan.com.br`. O painel mostra qual
+   registro criar. Se for preciso mover a zona para o Cloudflare, copie antes MX, SPF, DKIM e DMARC
+   (veja o passo 4 da seção do Workers abaixo).
+6. Rollback: *Deployments* → deploy anterior → *Rollback to this deployment*.
+
+**Manual, da sua máquina ou servidor** (Node 22.18+):
+
+```bash
+npx wrangler login          # abre o navegador para autorizar
+npm run build
+npm run deploy:pages        # wrangler pages deploy dist --project-name datan-site --branch main
+```
+
 ## Deploy: Cloudflare Workers (static assets)
 
 O site é só `dist/` servido pelo Workers Static Assets (`wrangler.jsonc`), sem código de Worker.

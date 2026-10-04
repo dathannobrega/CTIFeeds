@@ -3,7 +3,7 @@
   "type": "module",
   "version": "0.1.0",
   "private": true,
-  "description": "Blog e portfólio de pesquisa de ameaças — www.datan.com.br",
+  "description": "Blog e portf\u00f3lio de pesquisa de amea\u00e7as \u2014 www.datan.com.br",
   "engines": {
     "node": ">=22.18.0"
   },
@@ -21,6 +21,7 @@
     "build:drafts": "SHOW_DRAFTS=true npm run build",
     "preview": "wrangler dev",
     "deploy": "wrangler deploy",
+    "deploy:pages": "wrangler pages deploy dist --project-name datan-site --branch main",
     "audit": "node scripts/audit.ts",
     "export:iocs": "node scripts/export-iocs.ts"
   },

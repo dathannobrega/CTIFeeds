@@ -37,6 +37,10 @@
 /.well-known/security.txt
   Content-Type: text/plain; charset=utf-8
 
-# URLs *.workers.dev (produção sem domínio e prévias) fora dos buscadores.
+# URLs *.workers.dev e *.pages.dev (produção sem domínio e prévias) fora dos buscadores.
 https://:version.:subdomain.workers.dev/*
+  X-Robots-Tag: noindex
+https://:project.pages.dev/*
+  X-Robots-Tag: noindex
+https://:version.:project.pages.dev/*
   X-Robots-Tag: noindex
