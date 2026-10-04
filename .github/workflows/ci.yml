@@ -1,0 +1,95 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Validar e compilar
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      # RNF-04: falha com vulnerabilidade alta/crítica fora de audit-allowlist.json
+      - run: npm run audit
+      - run: npm test
+      - run: npm run check
+      # validate → astro build → pagefind → check-dist (RF-11, RF-05, RNF-01, RNF-08)
+      - name: Build de produção
+        run: npm run build
+        env:
+          # Nomes de empregador/clientes ficam num secret, nunca no repositório.
+          FORBIDDEN_TERMS: ${{ secrets.FORBIDDEN_TERMS }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist
+          retention-days: 7
+
+  drafts:
+    name: Rascunhos + validação STIX
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      # Compila também os rascunhos (inclui a campanha de exemplo) para exercitar o pipeline de IoCs.
+      - run: npm run build:drafts
+        env:
+          FORBIDDEN_TERMS: ${{ secrets.FORBIDDEN_TERMS }}
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      # 3.3.1 foi publicada sem os schemas; 3.2.0 traz os schemas OASIS embutidos.
+      - run: pip install stix2-validator==3.2.0
+      - name: Validar bundles STIX 2.1 (RF-17)
+        run: |
+          shopt -s nullglob
+          bundles=(dist/iocs/*.stix.json)
+          if [ ${#bundles[@]} -eq 0 ]; then echo "nenhum bundle"; exit 0; fi
+          # 302 = "external reference sem hash" (boa prática opcional para links de post)
+          stix2_validator --version 2.1 --strict --disable 302 "${bundles[@]}"
+
+  lighthouse:
+    name: Lighthouse (desempenho e acessibilidade)
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
+      # RNF-01 (LCP ≤ 2,5 s, CLS ≤ 0,1) e RNF-05 (acessibilidade ≥ 95) — ver lighthouserc.json
+      - run: npx --yes @lhci/cli@0.15.1 autorun
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse
+          path: .lighthouseci
+          retention-days: 7

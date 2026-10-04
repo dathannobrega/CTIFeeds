@@ -1,0 +1,56 @@
+---
+import { existsSync } from 'node:fs';
+import type { Lang } from '../i18n/config.ts';
+import { routeAlternates, routePath } from '../i18n/routes.ts';
+import { t } from '../i18n/ui.ts';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { SITE } from '../site.config.ts';
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+const title = t(lang, 'nav.contact');
+const hasPgp = existsSync('public/pgp-key.asc');
+const links = [
+  SITE.author.email && { label: 'E-mail', href: `mailto:${SITE.author.email}`, text: SITE.author.email },
+  { label: 'GitHub', href: `https://github.com/${SITE.author.github}`, text: `@${SITE.author.github}` },
+  SITE.author.linkedin && { label: 'LinkedIn', href: SITE.author.linkedin, text: 'LinkedIn' },
+  SITE.author.medium && { label: 'Medium', href: SITE.author.medium, text: 'Medium' },
+].filter((l): l is { label: string; href: string; text: string } => Boolean(l));
+const description =
+  lang === 'en'
+    ? `How to reach ${SITE.author.name}, report a security issue or correct an IoC.`
+    : `Como falar com ${SITE.author.name}, reportar uma falha de segurança ou corrigir um IoC.`;
+---
+
+<BaseLayout
+  lang={lang}
+  title={title}
+  description={description}
+  path={routePath('contact', lang)}
+  alternates={routeAlternates('contact')}
+  active="contact"
+>
+  <article class="prose">
+    <h1>{title}</h1>
+    <p>{t(lang, 'contact.intro')}</p>
+    <ul>
+      {
+        links.map((l) => (
+          <li>
+            {l.label}: <a href={l.href} rel="me noopener">{l.text}</a>
+          </li>
+        ))
+      }
+      {hasPgp && <li><a href="/pgp-key.asc" download>{t(lang, 'contact.pgp')}</a></li>}
+    </ul>
+    <p>
+      {t(lang, 'contact.corrections')} <a href={`${SITE.repoUrl}/issues`} rel="noopener">{SITE.repoUrl.replace('https://', '')}/issues</a>.
+    </p>
+    <p>
+      {t(lang, 'contact.security')} <a href="/.well-known/security.txt">security.txt</a>.
+    </p>
+  </article>
+</BaseLayout>

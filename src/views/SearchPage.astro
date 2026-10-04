@@ -1,0 +1,36 @@
+---
+import type { Lang } from '../i18n/config.ts';
+import { routeAlternates, routePath } from '../i18n/routes.ts';
+import { t } from '../i18n/ui.ts';
+import BaseLayout from '../layouts/BaseLayout.astro';
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+---
+
+<BaseLayout
+  lang={lang}
+  title={t(lang, 'search.title')}
+  description={t(lang, 'search.label')}
+  path={routePath('search', lang)}
+  alternates={routeAlternates('search')}
+  active="search"
+>
+  <h1>{t(lang, 'search.title')}</h1>
+  <form role="search" class="search-form" data-results-label={t(lang, 'search.results')} data-empty={t(lang, 'search.noResults')}>
+    <label for="q">{t(lang, 'search.label')}</label>
+    <input id="q" name="q" type="search" placeholder={t(lang, 'search.placeholder')} autocomplete="off" />
+  </form>
+  <p id="search-status" class="muted" role="status" aria-live="polite"></p>
+  <ol id="search-results" class="post-list"></ol>
+  <noscript>
+    <p>{t(lang, 'search.noscript')} <a href={routePath('tags', lang)}>{t(lang, 'nav.tags')}</a></p>
+  </noscript>
+</BaseLayout>
+
+<script>
+  import '../scripts/search.ts';
+</script>

@@ -1,0 +1,115 @@
+---
+import { existsSync } from 'node:fs';
+import { RESUME, type ResumeEntry } from '../data/resume.ts';
+import type { Lang } from '../i18n/config.ts';
+import { routeAlternates, routePath } from '../i18n/routes.ts';
+import { t } from '../i18n/ui.ts';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { SITE } from '../site.config.ts';
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+const title = t(lang, 'nav.resume');
+// O link de PDF só aparece se o arquivo existir em public/cv/.
+const pdf = `/cv/cv-${lang}.pdf`;
+const hasPdf = existsSync(`public${pdf}`);
+const sections: { key: 'resume.experience' | 'resume.education'; items: ResumeEntry[] }[] = [
+  { key: 'resume.experience', items: RESUME.experience },
+  { key: 'resume.education', items: RESUME.education },
+];
+---
+
+<BaseLayout
+  lang={lang}
+  title={title}
+  description={RESUME.headline[lang]}
+  path={routePath('resume', lang)}
+  alternates={routeAlternates('resume')}
+  active="resume"
+>
+  <article class="prose resume">
+    <h1>{SITE.author.name}</h1>
+    <p class="lead">{RESUME.headline[lang]}</p>
+    <p class="no-print">
+      {hasPdf ? <a href={pdf} download>{t(lang, 'resume.download')}</a> : <span class="muted">{t(lang, 'resume.print')}</span>}
+    </p>
+    <p>{RESUME.summary[lang]}</p>
+
+    {
+      sections.map(
+        ({ key, items }) =>
+          items.length > 0 && (
+            <section>
+              <h2>{t(lang, key)}</h2>
+              {items.map((item) => (
+                <div class="resume-entry">
+                  <h3>
+                    {item.title[lang]} · {item.org}
+                  </h3>
+                  <p class="meta">{item.period[lang]}</p>
+                  {item.details && (
+                    <ul>
+                      {item.details.map((d) => (
+                        <li>{d[lang]}</li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              ))}
+            </section>
+          ),
+      )
+    }
+
+    {
+      RESUME.certifications.length > 0 && (
+        <section>
+          <h2>{t(lang, 'resume.certifications')}</h2>
+          <ul>
+            {RESUME.certifications.map((c) => (
+              <li>
+                {c.url ? <a href={c.url}>{c.name}</a> : c.name}
+                {c.year && <span class="muted"> ({c.year})</span>}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )
+    }
+
+    {
+      RESUME.skills.length > 0 && (
+        <section>
+          <h2>{t(lang, 'resume.skills')}</h2>
+          <dl>
+            {RESUME.skills.map((s) => (
+              <>
+                <dt>{s.group[lang]}</dt>
+                <dd>{s.items.join(', ')}</dd>
+              </>
+            ))}
+          </dl>
+        </section>
+      )
+    }
+
+    {
+      RESUME.publications.length > 0 && (
+        <section>
+          <h2>{t(lang, 'resume.publications')}</h2>
+          <ul>
+            {RESUME.publications.map((p) => (
+              <li>
+                <a href={p.url}>{p.title}</a>
+                {p.year && <span class="muted"> ({p.year})</span>}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )
+    }
+  </article>
+</BaseLayout>

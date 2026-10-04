@@ -1,0 +1,91 @@
+---
+title: "Este site por dentro: Astro, feeds e IoCs a partir de uma fonte única"
+description: "A arquitetura deste blog: páginas estáticas em Astro em inglês e português, feeds RSS e JSON e um build que transforma um YAML por campanha em CSV e STIX 2.1."
+lang: pt-br
+translationKey: how-this-site-works
+pubDate: 2026-10-04
+tags: [astro, cloudflare-workers, stix, rss, csp]
+---
+
+Pesquisa de ameaças só é útil se outras pessoas conseguem ler e reaproveitar os dados. Este
+site foi construído em torno dessa ideia: cada post é escrito para humanos, e cada campanha
+também sai como dado que um SIEM, um EDR ou uma plataforma de CTI consegue importar sem
+ninguém copiar valores de dentro do HTML.
+
+## Páginas estáticas, conteúdo tipado
+
+O site é HTML puro gerado pelo [Astro](https://astro.build/) a partir de arquivos MDX
+versionados no Git. Não há banco de dados, login, comentários nem script de terceiros em tempo
+de execução, o que mantém a superfície de ataque perto de zero e as páginas rápidas.
+
+Cada post tem um schema de frontmatter (título, idioma, tags, IDs ATT&CK, TLP). Se falta um
+campo obrigatório, ou se o post declara algo diferente de TLP:CLEAR, o build falha. Rascunhos
+ficam fora do build de produção.
+
+## Dois idiomas, um canônico
+
+Inglês é o idioma canônico e o português do Brasil o espelha. Cada página fica sob o próprio
+prefixo (`/en/` e `/pt-br/`), e as duas versões de um post compartilham uma chave de tradução:
+
+- cada página declara a si mesma e à versão irmã com tags `hreflang` recíprocas;
+- post sem tradução não emite `hreflang` para o idioma que falta e mostra um aviso, em vez de
+  conteúdo traduzido automaticamente;
+- a URL raiz é uma página de escolha de idioma e o alvo do `x-default`, não um redirecionamento
+  às cegas.
+
+Cada idioma tem o próprio feed RSS (`/en/rss.xml`, `/pt-br/rss.xml`) e JSON Feed, então quem
+assina recebe só os posts no idioma que acompanha.
+
+## IoCs: uma fonte, vários formatos
+
+Uma campanha é descrita por um arquivo YAML em `data/campaigns/`. Ele é o único lugar onde os
+indicadores são escritos; todo o resto é gerado no build:
+
+```yaml
+id: 2026-10-example
+tlp: CLEAR
+first_seen: 2026-09-01
+last_seen: 2026-09-28
+source: personal honeypot
+attack: [T1110, T1021.004]
+post: /en/research/example/
+iocs:
+  - { type: ipv4, value: 192.0.2.10, confidence: high, first_seen: 2026-09-02 } # RFC 5737
+```
+
+A partir dele o build produz:
+
+- `/iocs/<campanha>.csv` com as mesmas colunas em todas as campanhas (tipo, valor, primeira e
+  última observação, confiança, TLP, campanha, URL do post, fonte);
+- listas simples, um valor por linha, prontas para blocklists;
+- um bundle STIX 2.1 com objetos `campaign`, `indicator`, `attack-pattern` e `relationship`,
+  validado contra os schemas da OASIS no CI;
+- um índice e um arquivo `CHECKSUMS.sha256`.
+
+A geração é determinística: os IDs STIX derivam dos dados, então rebuild com o mesmo YAML gera
+os mesmos bytes e os mesmos checksums.
+
+No texto, os indicadores aparecem sempre defanged (`hxxp`, `[.]`). Os valores brutos só
+existem nos arquivos para download, onde as ferramentas precisam deles. Uma checagem pós-build
+varre todas as páginas HTML e falha se um indicador bruto vazar para o texto.
+
+## Checagens antes de publicar
+
+O build é o único caminho até a produção, e ele se recusa a terminar quando:
+
+- um indicador está malformado, duplicado ou fora do período da campanha;
+- algo não é TLP:CLEAR;
+- um termo proibido (mantido fora do repositório) aparece no conteúdo ou nos dados;
+- uma imagem ainda tem metadados EXIF;
+- falta a um post de campanha uma das seções: resumo executivo, linha do tempo, análise
+  técnica, ATT&CK, IoCs, detecções e recomendações;
+- os links `hreflang` não são recíprocos, ou HTML, CSS e JS de um post passam de 100 KB.
+
+## Entrega
+
+A saída é servida pelo Cloudflare Workers com static assets. Um arquivo `_headers` define uma
+Content Security Policy sem `'unsafe-inline'` (o realce de sintaxe usa classes CSS em vez de
+estilos inline), HSTS, `nosniff` e uma política de referrer restrita. Cada pull request ganha
+uma URL de prévia, e o merge na `main` publica.
+
+O código do site é público; se encontrar algo errado, issues e pull requests são bem-vindos.

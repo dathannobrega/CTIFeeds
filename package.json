@@ -1,0 +1,37 @@
+{
+  "name": "datan-site",
+  "type": "module",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Blog e portf\u00f3lio de pesquisa de amea\u00e7as \u2014 www.datan.com.br",
+  "engines": {
+    "node": ">=22.18.0"
+  },
+  "scripts": {
+    "dev": "astro dev",
+    "new": "node scripts/new-post.ts",
+    "validate": "node scripts/validate.ts",
+    "test": "node --test tests/*.test.ts",
+    "check": "astro check",
+    "build": "npm run validate && astro build && pagefind --site dist && node scripts/check-dist.ts",
+    "build:drafts": "SHOW_DRAFTS=true npm run build",
+    "preview": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "audit": "node scripts/audit.ts",
+    "export:iocs": "node scripts/export-iocs.ts"
+  },
+  "dependencies": {
+    "@astrojs/mdx": "8.0.2",
+    "@astrojs/rss": "4.0.19",
+    "@astrojs/sitemap": "3.7.4",
+    "astro": "7.3.5"
+  },
+  "devDependencies": {
+    "@astrojs/check": "0.9.10",
+    "@types/node": "22.20.5",
+    "pagefind": "1.5.2",
+    "typescript": "6.0.3",
+    "wrangler": "4.147.0",
+    "yaml": "2.9.1"
+  }
+}

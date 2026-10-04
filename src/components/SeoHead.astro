@@ -1,0 +1,111 @@
+---
+import { HTML_LANG, LANG_NAME, OG_LOCALE, type Lang } from '../i18n/config.ts';
+import { routePath } from '../i18n/routes.ts';
+import { SITE } from '../site.config.ts';
+
+export interface Alternate {
+  lang: Lang;
+  path: string;
+}
+
+export interface Props {
+  lang: Lang;
+  title: string;
+  description: string;
+  /** Caminho da página atual (ex.: /en/about/). */
+  path: string;
+  /**
+   * Versões da página em cada idioma, incluindo a própria. hreflang só é
+   * emitido quando há duas ou mais (RF-05).
+   */
+  alternates?: Alternate[];
+  /** Alvo do x-default (padrão: nenhum). */
+  xDefault?: string | undefined;
+  /** Sobrescreve o canonical (republicação). Suprime hreflang. */
+  canonicalUrl?: string | undefined;
+  ogType?: 'website' | 'article' | 'profile';
+  image?: { src: string; alt: string } | undefined;
+  publishedTime?: Date | undefined;
+  modifiedTime?: Date | undefined;
+  articleTags?: string[];
+  jsonLd?: object[];
+  noindex?: boolean;
+}
+
+const {
+  lang,
+  title,
+  description,
+  path,
+  alternates = [],
+  xDefault,
+  canonicalUrl,
+  ogType = 'website',
+  image,
+  publishedTime,
+  modifiedTime,
+  articleTags = [],
+  jsonLd = [],
+  noindex = false,
+} = Astro.props;
+
+const abs = (p: string) => new URL(p, SITE.url).href;
+const canonical = canonicalUrl ?? abs(path);
+const emitHreflang = !canonicalUrl && alternates.length > 1;
+const fullTitle = path === routePath('home', lang) ? `${SITE.author.name} · ${title}` : `${title} · ${SITE.name}`;
+const ogImage = image ?? {
+  src: `/og/default-${lang}.png`,
+  alt: lang === 'en' ? `${SITE.name} — threat research` : `${SITE.name} — pesquisa de ameaças`,
+};
+const otherLocales = alternates.filter((a) => a.lang !== lang).map((a) => OG_LOCALE[a.lang]);
+// JSON-LD é bloco de dados (não executa), então não depende da CSP de script.
+const ldJson = (data: object) => JSON.stringify(data).replace(/</g, '\\u003c');
+---
+
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>{fullTitle}</title>
+<meta name="description" content={description} />
+<link rel="canonical" href={canonical} />
+{noindex && <meta name="robots" content="noindex" />}
+{
+  emitHreflang &&
+    alternates.map((a) => <link rel="alternate" hreflang={HTML_LANG[a.lang]} href={abs(a.path)} />)
+}
+{emitHreflang && xDefault && <link rel="alternate" hreflang="x-default" href={abs(xDefault)} />}
+<link
+  rel="alternate"
+  type="application/rss+xml"
+  title={`${SITE.name} — ${LANG_NAME[lang]}`}
+  href={routePath('rss', lang)}
+/>
+<link
+  rel="alternate"
+  type="application/feed+json"
+  title={`${SITE.name} — ${LANG_NAME[lang]} (JSON Feed)`}
+  href={routePath('jsonFeed', lang)}
+/>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+<meta name="color-scheme" content="light dark" />
+<meta name="theme-color" content="#f8f9fb" media="(prefers-color-scheme: light)" />
+<meta name="theme-color" content="#0f1216" media="(prefers-color-scheme: dark)" />
+<meta name="author" content={SITE.author.name} />
+
+<meta property="og:type" content={ogType} />
+<meta property="og:site_name" content={SITE.name} />
+<meta property="og:title" content={title} />
+<meta property="og:description" content={description} />
+<meta property="og:url" content={canonical} />
+<meta property="og:locale" content={OG_LOCALE[lang]} />
+{otherLocales.map((l) => <meta property="og:locale:alternate" content={l} />)}
+<meta property="og:image" content={abs(ogImage.src)} />
+<meta property="og:image:alt" content={ogImage.alt} />
+{publishedTime && <meta property="article:published_time" content={publishedTime.toISOString()} />}
+{modifiedTime && <meta property="article:modified_time" content={modifiedTime.toISOString()} />}
+{articleTags.map((tag) => <meta property="article:tag" content={tag} />)}
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content={title} />
+<meta name="twitter:description" content={description} />
+<meta name="twitter:image" content={abs(ogImage.src)} />
+<meta name="twitter:image:alt" content={ogImage.alt} />
+{jsonLd.map((data) => <script type="application/ld+json" is:inline set:html={ldJson(data)} />)}

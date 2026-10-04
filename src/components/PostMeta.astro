@@ -1,0 +1,33 @@
+---
+import type { Lang } from '../i18n/config.ts';
+import { formatDate, t, type UiKey } from '../i18n/ui.ts';
+import type { PostKind } from '../lib/content.ts';
+
+interface Props {
+  lang: Lang;
+  kind: PostKind;
+  pubDate: Date;
+  updatedDate?: Date | undefined;
+  tlp?: string | undefined;
+  draft?: boolean;
+}
+
+const { lang, kind, pubDate, updatedDate, tlp, draft = false } = Astro.props;
+const showTlp = tlp && (kind === 'campaign' || kind === 'research');
+---
+
+<p class="meta">
+  <span class="badge">{t(lang, `type.${kind}` as UiKey)}</span>
+  {showTlp && <span class="badge badge-tlp">TLP:{tlp}</span>}
+  {draft && <span class="badge">draft</span>}
+  <span>
+    {t(lang, 'post.published')} <time datetime={pubDate.toISOString()}>{formatDate(pubDate, lang)}</time>
+  </span>
+  {
+    updatedDate && (
+      <span>
+        {t(lang, 'post.updated')} <time datetime={updatedDate.toISOString()}>{formatDate(updatedDate, lang)}</time>
+      </span>
+    )
+  }
+</p>

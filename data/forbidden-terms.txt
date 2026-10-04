@@ -1,0 +1,12 @@
+# Termos que barram o build se aparecerem em conteúdo, dados ou arquivos públicos.
+# Um por linha; maiúsculas e acentos são ignorados; casa palavra inteira.
+#
+# NÃO coloque aqui nomes de empregador, clientes ou sistemas internos: este arquivo
+# é público. Use data/forbidden-terms.local.txt (ignorado pelo Git) e o secret
+# FORBIDDEN_TERMS no GitHub Actions.
+#
+# Marcadores de material que não é TLP:CLEAR:
+TLP:RED
+TLP:AMBER
+TLP:AMBER+STRICT
+TLP:GREEN

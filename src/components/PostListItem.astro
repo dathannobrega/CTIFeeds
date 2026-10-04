@@ -1,0 +1,31 @@
+---
+import { HTML_LANG } from '../i18n/config.ts';
+import type { Lang } from '../i18n/config.ts';
+import { formatDate, t, type UiKey } from '../i18n/ui.ts';
+import { kindOf, langOf, urlOf, type PostEntry } from '../lib/content.ts';
+
+interface Props {
+  entry: PostEntry;
+  /** Idioma da página que lista (para marcar posts em outro idioma). */
+  pageLang: Lang;
+  headingLevel?: 2 | 3;
+}
+
+const { entry, pageLang, headingLevel = 2 } = Astro.props;
+const postLang = langOf(entry);
+const foreign = postLang !== pageLang;
+const Heading = headingLevel === 2 ? 'h2' : 'h3';
+---
+
+<li lang={foreign ? HTML_LANG[postLang] : undefined}>
+  <p class="meta">
+    <span class="badge">{t(pageLang, `type.${kindOf(entry)}` as UiKey)}</span>
+    <time datetime={entry.data.pubDate.toISOString()}>{formatDate(entry.data.pubDate, postLang)}</time>
+    {foreign && <span class="badge">{postLang === 'en' ? 'EN' : 'PT-BR'}</span>}
+    {entry.data.draft && <span class="badge">draft</span>}
+  </p>
+  <Heading>
+    <a href={urlOf(entry)} hreflang={foreign ? HTML_LANG[postLang] : undefined}>{entry.data.title}</a>
+  </Heading>
+  <p>{entry.data.description}</p>
+</li>

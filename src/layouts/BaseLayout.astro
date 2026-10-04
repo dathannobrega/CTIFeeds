@@ -1,0 +1,101 @@
+---
+import '../styles/global.css';
+import SeoHead, { type Props as SeoProps } from '../components/SeoHead.astro';
+import { HTML_LANG, otherLang } from '../i18n/config.ts';
+import { routePath, type RouteKey } from '../i18n/routes.ts';
+import { t } from '../i18n/ui.ts';
+import { SITE } from '../site.config.ts';
+
+export interface Props extends SeoProps {
+  /** Link do seletor de idioma; por padrão, a versão irmã ou a home do outro idioma. */
+  switchHref?: string | undefined;
+  /** Item de menu ativo. */
+  active?: RouteKey | undefined;
+}
+
+const props = Astro.props;
+const { lang, switchHref, active } = props;
+const other = otherLang(lang);
+const sibling = props.alternates?.find((a) => a.lang === other)?.path;
+const languageHref = switchHref ?? sibling ?? routePath('home', other);
+
+const nav: { key: RouteKey; label: string }[] = [
+  { key: 'research', label: t(lang, 'nav.research') },
+  { key: 'walkthroughs', label: t(lang, 'nav.walkthroughs') },
+  { key: 'notes', label: t(lang, 'nav.notes') },
+  { key: 'campaigns', label: t(lang, 'nav.campaigns') },
+  { key: 'projects', label: t(lang, 'nav.projects') },
+  { key: 'about', label: t(lang, 'nav.about') },
+];
+const footerLinks: { key: RouteKey; label: string }[] = [
+  { key: 'resume', label: t(lang, 'nav.resume') },
+  { key: 'contact', label: t(lang, 'nav.contact') },
+  { key: 'tags', label: t(lang, 'nav.tags') },
+  { key: 'rss', label: 'RSS' },
+  { key: 'jsonFeed', label: 'JSON Feed' },
+];
+const year = new Date().getUTCFullYear();
+---
+
+<!doctype html>
+<html lang={HTML_LANG[lang]}>
+  <head>
+    <SeoHead {...props} />
+    <slot name="head" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">{t(lang, 'skip')}</a>
+    <header class="site-header">
+      <div class="container header-inner">
+        <a class="brand" href={routePath('home', lang)}>{SITE.name}</a>
+        <nav aria-label={t(lang, 'nav.main')}>
+          <ul class="nav-list">
+            {
+              nav.map((item) => (
+                <li>
+                  <a href={routePath(item.key, lang)} aria-current={active === item.key ? 'page' : undefined}>
+                    {item.label}
+                  </a>
+                </li>
+              ))
+            }
+          </ul>
+        </nav>
+        <div class="header-tools">
+          <a href={routePath('search', lang)} aria-current={active === 'search' ? 'page' : undefined}>
+            {t(lang, 'nav.search')}
+          </a>
+          <a
+            class="lang-switch"
+            href={languageHref}
+            hreflang={HTML_LANG[other]}
+            lang={HTML_LANG[other]}
+            title={t(lang, 'lang.switch')}
+          >
+            <span aria-hidden="true">{t(lang, 'lang.switchShort')}</span>
+            <span class="visually-hidden">{t(lang, 'lang.switch')}</span>
+          </a>
+        </div>
+      </div>
+    </header>
+    <main id="main" class="container" tabindex="-1">
+      <slot />
+    </main>
+    <footer class="site-footer">
+      <div class="container">
+        <ul class="footer-links">
+          {
+            footerLinks.map((item) => (
+              <li>
+                <a href={routePath(item.key, lang)}>{item.label}</a>
+              </li>
+            ))
+          }
+          <li><a href={SITE.repoUrl} rel="noopener">{t(lang, 'footer.source')}</a></li>
+        </ul>
+        <p>{t(lang, 'footer.disclaimer')}</p>
+        <p class="muted">© {year} {SITE.author.name}. {t(lang, 'footer.license')}</p>
+      </div>
+    </footer>
+  </body>
+</html>

@@ -1,0 +1,23 @@
+# build
+dist/
+.astro/
+node_modules/
+
+# Cloudflare / wrangler
+.wrangler/
+.dev.vars*
+
+# Lista local de termos proibidos (nomes de empregador/clientes). Nunca versionar.
+data/forbidden-terms.local.txt
+
+# logs e sistema
+npm-debug.log*
+.DS_Store
+.env
+.env.*
+!.env.example
+
+# legado (Flask)
+__pycache__/
+*.pyc
+.lighthouseci/

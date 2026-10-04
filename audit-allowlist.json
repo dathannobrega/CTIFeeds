@@ -1,0 +1,8 @@
+[
+  {
+    "advisory": "GHSA-ch52-4w7c-c8xp",
+    "package": "http-cache-semantics",
+    "reason": "Usado pelo Astro só para cachear imagens remotas no build (astro/dist/assets/build/remote.js); este site não usa imagens remotas nem roda servidor. Sem versão corrigida publicada em 2026-10-04.",
+    "expires": "2027-01-04"
+  }
+]

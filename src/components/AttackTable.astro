@@ -1,0 +1,42 @@
+---
+/**
+ * Tabela de técnicas ATT&CK. Use no post de campanha:
+ *   <AttackTable ids={['T1110', 'T1021.004']} />
+ * Nomes vêm do YAML da campanha quando informados.
+ */
+import { isLang, type Lang } from '../i18n/config.ts';
+import { getPublishedCampaigns } from '../lib/campaign-data.ts';
+
+interface Props {
+  ids: string[];
+}
+
+const { ids } = Astro.props;
+const lang: Lang = isLang(Astro.currentLocale) ? Astro.currentLocale : 'en';
+const names = new Map<string, string>();
+for (const { campaign } of await getPublishedCampaigns()) {
+  for (const tech of campaign.attack) if (tech.name) names.set(tech.id, tech.name);
+}
+const url = (id: string) => `https://attack.mitre.org/techniques/${id.replace('.', '/')}/`;
+---
+
+<table class="data-table">
+  <thead>
+    <tr>
+      <th scope="col">ID</th>
+      <th scope="col">{lang === 'en' ? 'Technique' : 'Técnica'}</th>
+    </tr>
+  </thead>
+  <tbody>
+    {
+      ids.map((id) => (
+        <tr>
+          <td>
+            <a href={url(id)} rel="noopener">{id}</a>
+          </td>
+          <td>{names.get(id) ?? '—'}</td>
+        </tr>
+      ))
+    }
+  </tbody>
+</table>

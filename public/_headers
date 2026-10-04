@@ -1,0 +1,42 @@
+# Headers de segurança e cache (RNF-02). Aplicados pelo Workers Static Assets.
+# A CSP não usa 'unsafe-inline': todo JS/CSS é servido de arquivos em /_astro/.
+# 'wasm-unsafe-eval' permite apenas compilar WebAssembly (usado pela busca Pagefind);
+# não libera eval() de JavaScript.
+/*
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src 'self'; media-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=(), browsing-topics=()
+  Cross-Origin-Opener-Policy: same-origin
+
+# Arquivos com hash no nome: cache longo.
+/_astro/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Feeds e IoCs podem ser lidos por scripts de outros domínios.
+/en/rss.xml
+  Access-Control-Allow-Origin: *
+/pt-br/rss.xml
+  Access-Control-Allow-Origin: *
+/en/feed.json
+  Access-Control-Allow-Origin: *
+  Content-Type: application/feed+json; charset=utf-8
+/pt-br/feed.json
+  Access-Control-Allow-Origin: *
+  Content-Type: application/feed+json; charset=utf-8
+
+# Valores brutos de IoC: legíveis por ferramentas, fora dos buscadores.
+/iocs/*
+  Access-Control-Allow-Origin: *
+  X-Robots-Tag: noindex
+/iocs/CHECKSUMS.sha256
+  Content-Type: text/plain; charset=utf-8
+
+/.well-known/security.txt
+  Content-Type: text/plain; charset=utf-8
+
+# URLs *.workers.dev (produção sem domínio e prévias) fora dos buscadores.
+https://:version.:subdomain.workers.dev/*
+  X-Robots-Tag: noindex

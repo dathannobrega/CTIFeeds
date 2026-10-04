@@ -1,0 +1,54 @@
+---
+/**
+ * Tabela de IoCs de uma campanha, para a seção "IoCs" do post:
+ *   <CampaignIocs id="2026-10-exemplo-honeypot-ssh" />
+ * Valores aparecem defanged; os downloads trazem os valores brutos.
+ */
+import { isLang, type Lang } from '../i18n/config.ts';
+import { t } from '../i18n/ui.ts';
+import { findPublishedCampaign } from '../lib/campaign-data.ts';
+import { defang } from '../lib/iocs/defang.ts';
+import CampaignDownloads from './CampaignDownloads.astro';
+
+interface Props {
+  id: string;
+}
+
+const { id } = Astro.props;
+const lang: Lang = isLang(Astro.currentLocale) ? Astro.currentLocale : 'en';
+const published = await findPublishedCampaign(id);
+if (!published) {
+  throw new Error(`<CampaignIocs id="${id}">: campanha inexistente ou não publicada`);
+}
+const { campaign } = published;
+---
+
+<div class="campaign-iocs">
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th scope="col">{t(lang, 'ioc.type')}</th>
+        <th scope="col">{t(lang, 'ioc.value')}</th>
+        <th scope="col">{t(lang, 'ioc.confidence')}</th>
+        <th scope="col">{t(lang, 'ioc.firstSeen')}</th>
+      </tr>
+    </thead>
+    <tbody>
+      {
+        campaign.iocs.map((ioc) => (
+          <tr>
+            <td>{ioc.type}</td>
+            <td>
+              <code class="ioc">{defang(ioc.value, ioc.type)}</code>
+            </td>
+            <td>{ioc.confidence}</td>
+            <td>
+              <time datetime={ioc.first_seen}>{ioc.first_seen}</time>
+            </td>
+          </tr>
+        ))
+      }
+    </tbody>
+  </table>
+  <CampaignDownloads published={published} lang={lang} />
+</div>
