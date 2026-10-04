@@ -14,12 +14,24 @@ JSON por idioma e IoCs legíveis por máquina (CSV, listas TXT e STIX 2.1) gerad
 
 ## Começando
 
-Requisitos: Node 22 (versão fixada em `.nvmrc`) e npm.
+Requisitos: **Node 22.18 ou mais novo** (versão fixada em `.nvmrc`) e npm. Node 20 não funciona: o
+Astro 7 exige 22.12+ e os scripts `.ts` usam o *type stripping* nativo do Node, estável a partir do
+22.18. O `.npmrc` tem `engine-strict=true`, então `npm ci` recusa versões antigas, e `dev`, `build`,
+`test` e `new` checam a versão antes de rodar.
 
 ```bash
-nvm use            # ou instale a versão do .nvmrc
+nvm install && nvm use   # lê o .nvmrc
 npm ci
-npm run dev        # http://localhost:4321 — rascunhos aparecem no modo dev
+npm run dev              # http://localhost:4321 — rascunhos aparecem no modo dev
+```
+
+Num servidor Debian/Ubuntu sem nvm:
+
+```bash
+curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+sudo apt-get install -y nodejs
+node -v                  # v22.18 ou maior
+rm -rf node_modules && npm ci && npm run build
 ```
 
 | Comando | O que faz |
