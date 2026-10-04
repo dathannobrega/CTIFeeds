@@ -1,0 +1,62 @@
+---
+import type { Lang } from '../i18n/config.ts';
+import { t } from '../i18n/ui.ts';
+import type { PublishedCampaign } from '../lib/campaign-data.ts';
+import { sha256 } from '../lib/iocs/export.ts';
+
+interface Props {
+  published: PublishedCampaign;
+  lang: Lang;
+  /** Lista um arquivo por linha com o SHA-256 (índice de campanhas, RF-16). */
+  showChecksums?: boolean;
+}
+
+const { published, lang, showChecksums = false } = Astro.props;
+const id = published.campaign.id;
+const label = (path: string) => {
+  if (path === `${id}.csv`) return t(lang, 'ioc.csv');
+  if (path === `${id}.stix.json`) return t(lang, 'ioc.stix');
+  return path.slice(id.length + 1);
+};
+const main = published.files.filter((f) => !f.path.includes('/'));
+const lists = published.files.filter((f) => f.path.includes('/'));
+---
+
+<div class:list={['downloads', { 'with-checksums': showChecksums }]}>
+  <p class="muted">{t(lang, 'ioc.rawNotice')}</p>
+  {
+    showChecksums ? (
+      <ul class="inline-list">
+        {published.files.map((f) => (
+          <li>
+            <a href={`/iocs/${f.path}`} download>
+              {label(f.path)}
+            </a>
+            <code class="checksum">sha256:{sha256(f.content)}</code>
+          </li>
+        ))}
+      </ul>
+    ) : (
+      <ul class="inline-list">
+        {main.map((f) => (
+          <li>
+            <a href={`/iocs/${f.path}`} download>
+              {label(f.path)}
+            </a>
+          </li>
+        ))}
+        <li>
+          {t(lang, 'ioc.lists')}:{' '}
+          {lists.map((f, i) => (
+            <>
+              {i > 0 && ', '}
+              <a href={`/iocs/${f.path}`} download>
+                {label(f.path)}
+              </a>
+            </>
+          ))}
+        </li>
+      </ul>
+    )
+  }
+</div>

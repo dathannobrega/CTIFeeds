@@ -1,0 +1,136 @@
+---
+import { render } from 'astro:content';
+import AttackTable from '../components/AttackTable.astro';
+import CampaignDownloads from '../components/CampaignDownloads.astro';
+import CampaignIocs from '../components/CampaignIocs.astro';
+import Defang from '../components/Defang.astro';
+import PostMeta from '../components/PostMeta.astro';
+import TagList from '../components/TagList.astro';
+import Toc from '../components/Toc.astro';
+import { HTML_LANG, otherLang } from '../i18n/config.ts';
+import { routePath } from '../i18n/routes.ts';
+import { t } from '../i18n/ui.ts';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { findPublishedCampaign } from '../lib/campaign-data.ts';
+import { findTranslation, kindOf, langOf, urlOf, type PostEntry } from '../lib/content.ts';
+import { SITE } from '../site.config.ts';
+
+interface Props {
+  entry: PostEntry;
+}
+
+const { entry } = Astro.props;
+const { data } = entry;
+const lang = langOf(entry);
+const kind = kindOf(entry);
+const path = urlOf(entry);
+const translation = await findTranslation(entry);
+const { Content, headings } = await render(entry);
+const showToc = headings.filter((h) => h.depth === 2).length >= 3;
+const campaign =
+  entry.collection === 'research' && entry.data.campaign
+    ? await findPublishedCampaign(entry.data.campaign)
+    : undefined;
+
+const alternates = [{ lang, path }, ...(translation ? [{ lang: langOf(translation), path: urlOf(translation) }] : [])];
+// x-default aponta para a versão canônica (inglês) quando as duas existem.
+const xDefault = translation ? (lang === 'en' ? path : urlOf(translation)) : undefined;
+const image = data.image ? { src: data.image.src, alt: data.imageAlt ?? data.title } : undefined;
+const aboutUrl = new URL(routePath('about', lang), SITE.url).href;
+
+const jsonLd = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'BlogPosting',
+    headline: data.title,
+    description: data.description,
+    inLanguage: HTML_LANG[lang],
+    datePublished: data.pubDate.toISOString(),
+    dateModified: (data.updatedDate ?? data.pubDate).toISOString(),
+    url: data.canonicalUrl ?? new URL(path, SITE.url).href,
+    mainEntityOfPage: new URL(path, SITE.url).href,
+    keywords: [...data.tags, ...data.attack].join(', ') || undefined,
+    image: image ? new URL(image.src, SITE.url).href : new URL(`/og/default-${lang}.png`, SITE.url).href,
+    author: { '@type': 'Person', name: SITE.author.name, url: aboutUrl },
+    publisher: { '@type': 'Person', name: SITE.author.name, url: aboutUrl },
+  },
+];
+
+const components = { CampaignIocs, AttackTable, Defang };
+---
+
+<BaseLayout
+  lang={lang}
+  title={data.title}
+  description={data.description}
+  path={path}
+  alternates={alternates}
+  xDefault={xDefault}
+  canonicalUrl={data.canonicalUrl}
+  ogType="article"
+  image={image}
+  publishedTime={data.pubDate}
+  modifiedTime={data.updatedDate}
+  articleTags={[...data.tags, ...data.attack]}
+  jsonLd={jsonLd}
+  noindex={data.draft}
+  switchHref={translation ? urlOf(translation) : routePath(entry.collection, otherLang(lang))}
+  active={entry.collection}
+>
+  <article data-pagefind-body>
+    <header class="post-header">
+      <h1>{data.title}</h1>
+      <PostMeta
+        lang={lang}
+        kind={kind}
+        pubDate={data.pubDate}
+        updatedDate={data.updatedDate}
+        tlp={data.tlp}
+        draft={data.draft}
+      />
+      <p class="lead">{data.description}</p>
+      {
+        !translation && (
+          <div class="notice" data-pagefind-ignore>
+            <p>{t(lang, 'lang.onlyIn')}</p>
+            <p lang={HTML_LANG[otherLang(lang)]}>{t(otherLang(lang), 'lang.onlyInOther')}</p>
+          </div>
+        )
+      }
+      {
+        data.draft && (
+          <div class="notice" data-pagefind-ignore>
+            <p>{t(lang, 'post.draft')}</p>
+          </div>
+        )
+      }
+      {
+        data.canonicalUrl && (
+          <p class="muted">
+            {t(lang, 'post.republished')} <a href={data.canonicalUrl}>{new URL(data.canonicalUrl).hostname}</a>.
+          </p>
+        )
+      }
+      <TagList lang={lang} tags={data.tags} label={t(lang, 'post.tags')} />
+      <TagList lang={lang} tags={data.attack} label={t(lang, 'post.attack')} />
+      {
+        campaign && (
+          <section class="card no-print" aria-labelledby="resources-title" data-pagefind-ignore>
+            <h2 id="resources-title">{t(lang, 'post.resources')}</h2>
+            <CampaignDownloads published={campaign} lang={lang} />
+          </section>
+        )
+      }
+    </header>
+    <div class:list={['post-layout', { 'has-toc': showToc }]}>
+      {showToc && <Toc lang={lang} headings={headings} />}
+      <div class="prose" data-copy-label={t(lang, 'copy.label')} data-copy-done={t(lang, 'copy.done')}>
+        <Content components={components} />
+      </div>
+    </div>
+  </article>
+</BaseLayout>
+
+<script>
+  import '../scripts/copy-code.ts';
+</script>

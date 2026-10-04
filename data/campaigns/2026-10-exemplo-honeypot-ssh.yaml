@@ -1,0 +1,27 @@
+# EXEMPLO com valores fictícios (IPs de documentação RFC 5737 e TLD .test).
+# O post ligado a esta campanha é rascunho, então nada disto vai para produção.
+# Use como modelo: copie, renomeie (o nome do arquivo é o id) e troque os dados.
+id: 2026-10-exemplo-honeypot-ssh
+title: "Example: SSH brute-force campaign observed on a honeypot"
+title_pt: "Exemplo: campanha de força bruta SSH observada em honeypot"
+description: >-
+  Fictitious example used as a template. Values come from documentation
+  ranges and do not represent real infrastructure.
+tlp: CLEAR
+first_seen: 2026-09-01
+last_seen: 2026-09-28
+source: personal SSH honeypot (example)
+attack:
+  - { id: T1110, name: Brute Force }
+  - { id: T1021.004, name: "Remote Services: SSH" }
+post: /en/research/exemplo-honeypot-ssh/
+iocs:
+  - { type: ipv4, value: 203.0.113.10, confidence: high, first_seen: 2026-09-02 }
+  - { type: ipv4, value: 198.51.100.23, confidence: medium, first_seen: 2026-09-04, last_seen: 2026-09-20 }
+  - { type: domain, value: exemplo-malicioso.test, confidence: medium, first_seen: 2026-09-05 }
+  - { type: url, value: "http://exemplo-malicioso.test/payload.sh", confidence: medium, first_seen: 2026-09-05 }
+  - type: sha256
+    value: "0000000000000000000000000000000000000000000000000000000000000000"
+    confidence: low
+    first_seen: 2026-09-05
+    comment: placeholder hash, replace with the real payload hash

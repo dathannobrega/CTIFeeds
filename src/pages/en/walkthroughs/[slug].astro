@@ -1,0 +1,12 @@
+---
+import { getPostPaths, type PostEntry } from '../../../lib/content.ts';
+import PostPage from '../../../views/PostPage.astro';
+
+export function getStaticPaths() {
+  return getPostPaths('walkthroughs', 'en');
+}
+
+const { entry } = Astro.props as { entry: PostEntry };
+---
+
+<PostPage entry={entry} />

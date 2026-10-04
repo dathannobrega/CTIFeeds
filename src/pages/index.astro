@@ -1,0 +1,35 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { LANG_NAME } from '../i18n/config.ts';
+import { routePath } from '../i18n/routes.ts';
+import { SITE } from '../site.config.ts';
+
+/*
+ * Raiz: escolha de idioma, sem redirecionar às cegas (RF-04).
+ * É o alvo do hreflang x-default.
+ */
+const alternates = [
+  { lang: 'en' as const, path: routePath('home', 'en') },
+  { lang: 'pt-br' as const, path: routePath('home', 'pt-br') },
+];
+---
+
+<BaseLayout
+  lang="en"
+  title="Threat research · Pesquisa de ameaças"
+  description="Threat research, detection engineering and incident response notes, in English and Brazilian Portuguese. Pesquisa de ameaças em inglês e português."
+  path="/"
+  alternates={alternates}
+  xDefault="/"
+>
+  <div class="chooser">
+    <h1>{SITE.author.name}</h1>
+    <p class="muted">
+      Choose your language<span aria-hidden="true"> · </span><span lang="pt-BR">Escolha o idioma</span>
+    </p>
+    <ul>
+      <li><a href={routePath('home', 'en')} hreflang="en" lang="en">{LANG_NAME.en}</a></li>
+      <li><a href={routePath('home', 'pt-br')} hreflang="pt-BR" lang="pt-BR">{LANG_NAME['pt-br']}</a></li>
+    </ul>
+  </div>
+</BaseLayout>

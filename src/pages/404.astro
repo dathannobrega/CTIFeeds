@@ -1,0 +1,19 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { routePath } from '../i18n/routes.ts';
+---
+
+<BaseLayout
+  lang="en"
+  title="Page not found · Página não encontrada"
+  description="The page you requested does not exist. A página que você procurou não existe."
+  path="/404/"
+  noindex
+>
+  <h1>Page not found</h1>
+  <p>The page you requested does not exist. <a href={routePath('home', 'en')}>Go to the home page</a>.</p>
+  <div lang="pt-BR">
+    <h2>Página não encontrada</h2>
+    <p>A página que você procurou não existe. <a href={routePath('home', 'pt-br')}>Ir para o início</a>.</p>
+  </div>
+</BaseLayout>

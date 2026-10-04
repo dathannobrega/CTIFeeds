@@ -1,0 +1,60 @@
+---
+import CampaignDownloads from '../components/CampaignDownloads.astro';
+import type { Lang } from '../i18n/config.ts';
+import { routeAlternates, routePath } from '../i18n/routes.ts';
+import { t } from '../i18n/ui.ts';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { getPublishedCampaigns } from '../lib/campaign-data.ts';
+import { langOf, urlOf } from '../lib/content.ts';
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+const campaigns = await getPublishedCampaigns();
+const title = t(lang, 'nav.campaigns');
+---
+
+<BaseLayout
+  lang={lang}
+  title={title}
+  description={t(lang, 'campaigns.intro')}
+  path={routePath('campaigns', lang)}
+  alternates={routeAlternates('campaigns')}
+  active="campaigns"
+>
+  <h1>{title}</h1>
+  <p class="lead">{t(lang, 'campaigns.intro')}</p>
+  <p>
+    <a href="/iocs/index.json">{t(lang, 'campaigns.index')}</a> (JSON)
+    <span aria-hidden="true"> · </span>
+    <a href="/iocs/CHECKSUMS.sha256">{t(lang, 'campaigns.checksums')}</a>
+  </p>
+  {campaigns.length === 0 && <p class="muted">{t(lang, 'list.empty')}</p>}
+  {
+    campaigns.map(({ campaign, posts, post }, i) => {
+      const localPost = posts.find((p) => langOf(p) === lang) ?? post;
+      const name = lang === 'pt-br' ? (campaign.title_pt ?? campaign.title) : campaign.title;
+      return (
+        <section class="card campaign" aria-labelledby={`c-${i}`}>
+          <h2 id={`c-${i}`}>{name}</h2>
+          <p class="meta">
+            <span class="badge badge-tlp">TLP:{campaign.tlp}</span>
+            <span>
+              {t(lang, 'campaigns.period')}: <time datetime={campaign.first_seen}>{campaign.first_seen}</time> –{' '}
+              <time datetime={campaign.last_seen}>{campaign.last_seen}</time>
+            </span>
+            <span>{campaign.iocs.length} IoCs</span>
+            <code>{campaign.id}</code>
+          </p>
+          <p>
+            {t(lang, 'campaigns.post')}: <a href={urlOf(localPost)}>{localPost.data.title}</a>
+          </p>
+          <p class="meta">ATT&CK: {campaign.attack.map((a) => a.id).join(', ')}</p>
+          <CampaignDownloads published={campaigns[i]!} lang={lang} showChecksums />
+        </section>
+      );
+    })
+  }
+</BaseLayout>

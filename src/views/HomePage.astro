@@ -1,0 +1,95 @@
+---
+import PostListItem from '../components/PostListItem.astro';
+import type { Lang } from '../i18n/config.ts';
+import { routeAlternates, routePath } from '../i18n/routes.ts';
+import { t } from '../i18n/ui.ts';
+import { PROJECTS } from '../data/projects.ts';
+import { RESUME } from '../data/resume.ts';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { getAllPosts } from '../lib/content.ts';
+import { SITE } from '../site.config.ts';
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+const posts = (await getAllPosts(lang)).slice(0, 8);
+const featured = PROJECTS.filter((p) => p.featured);
+const sameAs = [
+  `https://github.com/${SITE.author.github}`,
+  SITE.author.linkedin,
+  SITE.author.medium,
+].filter(Boolean);
+
+const jsonLd = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    name: SITE.name,
+    url: new URL(routePath('home', lang), SITE.url).href,
+    inLanguage: lang === 'en' ? 'en' : 'pt-BR',
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'Person',
+    name: SITE.author.name,
+    url: new URL(routePath('about', lang), SITE.url).href,
+    jobTitle: RESUME.headline[lang],
+    sameAs,
+  },
+];
+---
+
+<BaseLayout
+  lang={lang}
+  title={t(lang, 'site.tagline')}
+  description={RESUME.summary[lang]}
+  path={routePath('home', lang)}
+  alternates={routeAlternates('home')}
+  xDefault="/"
+  jsonLd={jsonLd}
+  active="home"
+>
+  <section class="intro">
+    <h1>{SITE.author.name}</h1>
+    <p class="lead">{RESUME.headline[lang]}. {RESUME.summary[lang]}</p>
+    <p>
+      <a href={routePath('about', lang)}>{t(lang, 'nav.about')}</a>
+      <span aria-hidden="true"> · </span>
+      <a href={routePath('resume', lang)}>{t(lang, 'nav.resume')}</a>
+      <span aria-hidden="true"> · </span>
+      <a href={routePath('rss', lang)}>{t(lang, 'home.feeds')}</a>
+    </p>
+  </section>
+
+  <section aria-labelledby="latest">
+    <h2 id="latest">{t(lang, 'home.latest')}</h2>
+    {
+      posts.length ? (
+        <ul class="post-list">
+          {posts.map((entry) => (
+            <PostListItem entry={entry} pageLang={lang} headingLevel={3} />
+          ))}
+        </ul>
+      ) : (
+        <p class="muted">{t(lang, 'list.empty')}</p>
+      )
+    }
+    <p><a href={routePath('research', lang)}>{t(lang, 'home.allResearch')} →</a></p>
+  </section>
+
+  <section aria-labelledby="featured">
+    <h2 id="featured">{t(lang, 'home.featured')}</h2>
+    <ul class="card-grid">
+      {
+        featured.map((p) => (
+          <li class="card">
+            <h3>{p.repo || p.url ? <a href={p.url ?? p.repo}>{p.name}</a> : p.name}</h3>
+            <p>{p.summary[lang]}</p>
+          </li>
+        ))
+      }
+    </ul>
+  </section>
+</BaseLayout>

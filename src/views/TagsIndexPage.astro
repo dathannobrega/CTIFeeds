@@ -1,0 +1,63 @@
+---
+import type { Lang } from '../i18n/config.ts';
+import { routeAlternates, routePath, tagPath } from '../i18n/routes.ts';
+import { t } from '../i18n/ui.ts';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { collectTags } from '../lib/tags.ts';
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+const { topics, attack } = await collectTags(lang);
+const description =
+  lang === 'en'
+    ? 'Posts indexed by topic, tool, malware family and MITRE ATT&CK technique.'
+    : 'Posts indexados por assunto, ferramenta, família de malware e técnica MITRE ATT&CK.';
+---
+
+<BaseLayout
+  lang={lang}
+  title={t(lang, 'tags.title')}
+  description={description}
+  path={routePath('tags', lang)}
+  alternates={routeAlternates('tags')}
+  active="tags"
+>
+  <h1>{t(lang, 'tags.title')}</h1>
+  <p class="lead">{description}</p>
+  {topics.length === 0 && attack.length === 0 && <p class="muted">{t(lang, 'list.empty')}</p>}
+  {
+    topics.length > 0 && (
+      <section aria-labelledby="topics">
+        <h2 id="topics">{t(lang, 'tags.topics')}</h2>
+        <ul class="tag-list">
+          {topics.map(({ tag, count }) => (
+            <li>
+              <a href={tagPath(lang, tag)}>
+                {tag} <span class="muted">({count})</span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      </section>
+    )
+  }
+  {
+    attack.length > 0 && (
+      <section aria-labelledby="attack">
+        <h2 id="attack">{t(lang, 'tags.attack')}</h2>
+        <ul class="tag-list">
+          {attack.map(({ tag, count }) => (
+            <li>
+              <a href={tagPath(lang, tag)}>
+                {tag} <span class="muted">({count})</span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      </section>
+    )
+  }
+</BaseLayout>

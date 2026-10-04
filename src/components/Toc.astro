@@ -1,0 +1,26 @@
+---
+import type { MarkdownHeading } from 'astro';
+import type { Lang } from '../i18n/config.ts';
+import { t } from '../i18n/ui.ts';
+
+interface Props {
+  lang: Lang;
+  headings: MarkdownHeading[];
+}
+
+const { lang, headings } = Astro.props;
+const items = headings.filter((h) => h.depth === 2 || h.depth === 3);
+---
+
+<nav class="toc" aria-labelledby="toc-title">
+  <h2 id="toc-title">{t(lang, 'post.toc')}</h2>
+  <ol>
+    {
+      items.map((h) => (
+        <li class={`depth-${h.depth}`}>
+          <a href={`#${h.slug}`}>{h.text}</a>
+        </li>
+      ))
+    }
+  </ol>
+</nav>

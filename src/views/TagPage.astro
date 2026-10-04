@@ -1,0 +1,49 @@
+---
+import PostListItem from '../components/PostListItem.astro';
+import { otherLang, type Lang } from '../i18n/config.ts';
+import { routePath, tagPath } from '../i18n/routes.ts';
+import { t } from '../i18n/ui.ts';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import type { PostEntry } from '../lib/content.ts';
+import { tagAlternates } from '../lib/tags.ts';
+
+interface Props {
+  lang: Lang;
+  tag: string;
+  posts: PostEntry[];
+}
+
+const { lang, tag, posts } = Astro.props;
+const isAttack = /^T\d{4}/.test(tag);
+const title = `${t(lang, 'tags.postsTagged')} “${tag}”`;
+const description =
+  lang === 'en'
+    ? `Posts about ${tag}${isAttack ? ' (MITRE ATT&CK technique)' : ''}.`
+    : `Posts sobre ${tag}${isAttack ? ' (técnica MITRE ATT&CK)' : ''}.`;
+const alternates = await tagAlternates(tag);
+const sibling = alternates.find((a) => a.lang !== lang)?.path;
+---
+
+<BaseLayout
+  lang={lang}
+  title={title}
+  description={description}
+  path={tagPath(lang, tag)}
+  alternates={alternates}
+  switchHref={sibling ?? routePath('tags', otherLang(lang))}
+  active="tags"
+>
+  <h1>{title}</h1>
+  {
+    isAttack && (
+      <p>
+        <a href={`https://attack.mitre.org/techniques/${tag.replace('.', '/')}/`} rel="noopener">
+          attack.mitre.org/techniques/{tag.replace('.', '/')}
+        </a>
+      </p>
+    )
+  }
+  <ul class="post-list">
+    {posts.map((entry) => <PostListItem entry={entry} pageLang={lang} />)}
+  </ul>
+</BaseLayout>

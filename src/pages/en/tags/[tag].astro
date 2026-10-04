@@ -1,0 +1,13 @@
+---
+import type { PostEntry } from '../../../lib/content.ts';
+import { getTagPaths } from '../../../lib/tags.ts';
+import TagPage from '../../../views/TagPage.astro';
+
+export function getStaticPaths() {
+  return getTagPaths('en');
+}
+
+const { tag, posts } = Astro.props as { tag: string; posts: PostEntry[] };
+---
+
+<TagPage lang="en" tag={tag} posts={posts} />

@@ -1,0 +1,15 @@
+---
+/**
+ * Exibe um IoC defanged no texto do post: <Defang value="evil.example" />
+ * → evil[.]example. O valor bruto nunca vai para o HTML.
+ */
+import { defang } from '../lib/iocs/defang.ts';
+
+interface Props {
+  value: string;
+}
+
+const { value } = Astro.props;
+---
+
+<code class="ioc">{defang(value)}</code>

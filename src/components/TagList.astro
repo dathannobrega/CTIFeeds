@@ -1,0 +1,24 @@
+---
+import type { Lang } from '../i18n/config.ts';
+import { tagPath } from '../i18n/routes.ts';
+
+interface Props {
+  lang: Lang;
+  tags: string[];
+  label: string;
+}
+
+const { lang, tags, label } = Astro.props;
+---
+
+{
+  tags.length > 0 && (
+    <ul class="tag-list" aria-label={label}>
+      {tags.map((tag) => (
+        <li>
+          <a href={tagPath(lang, tag)}>{tag}</a>
+        </li>
+      ))}
+    </ul>
+  )
+}

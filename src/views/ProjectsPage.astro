@@ -1,0 +1,41 @@
+---
+import { PROJECTS } from '../data/projects.ts';
+import type { Lang } from '../i18n/config.ts';
+import { routeAlternates, routePath } from '../i18n/routes.ts';
+import { t } from '../i18n/ui.ts';
+import BaseLayout from '../layouts/BaseLayout.astro';
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+const title = t(lang, 'nav.projects');
+---
+
+<BaseLayout
+  lang={lang}
+  title={title}
+  description={t(lang, 'projects.intro')}
+  path={routePath('projects', lang)}
+  alternates={routeAlternates('projects')}
+  active="projects"
+>
+  <h1>{title}</h1>
+  <p class="lead">{t(lang, 'projects.intro')}</p>
+  <ul class="card-grid">
+    {
+      PROJECTS.map((p) => (
+        <li class="card">
+          <h2>{p.name}</h2>
+          <p>{p.summary[lang]}</p>
+          <ul class="inline-list">
+            {p.repo && <li><a href={p.repo} rel="noopener">{t(lang, 'projects.code')}</a></li>}
+            {p.url && <li><a href={p.url}>{t(lang, 'projects.site')}</a></li>}
+          </ul>
+          <p class="meta">{p.tags.join(' · ')}</p>
+        </li>
+      ))
+    }
+  </ul>
+</BaseLayout>

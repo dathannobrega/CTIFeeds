@@ -1,0 +1,19 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  // Site 100% estático servido pelo Workers Static Assets (sem código de Worker).
+  "name": "datan-site",
+  "compatibility_date": "2026-10-01",
+  "assets": {
+    "directory": "./dist",
+    // Rotas inexistentes recebem o 404.html mais próximo com status 404.
+    "not_found_handling": "404-page",
+    // /en/about → /en/about/ ; arquivos como /en/rss.xml ficam sem barra.
+    "html_handling": "auto-trailing-slash"
+  },
+  // Prévia por branch/PR (Workers Builds + `wrangler preview`).
+  "preview_urls": true,
+  // Domínio customizado: só funciona depois que a zona datan.com.br estiver ativa
+  // no Cloudflare (veja o README). Descomente após migrar os nameservers.
+  // "routes": [{ "pattern": "www.datan.com.br", "custom_domain": true }],
+  "workers_dev": true
+}

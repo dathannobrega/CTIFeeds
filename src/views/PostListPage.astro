@@ -1,0 +1,68 @@
+---
+import PostListItem from '../components/PostListItem.astro';
+import { HTML_LANG, otherLang, type Lang } from '../i18n/config.ts';
+import { routeAlternates, routePath, type PostCollection } from '../i18n/routes.ts';
+import { t, type UiKey } from '../i18n/ui.ts';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { getPosts, getUntranslated } from '../lib/content.ts';
+
+interface Props {
+  lang: Lang;
+  collection: PostCollection;
+}
+
+const { lang, collection } = Astro.props;
+const posts = await getPosts(collection, lang);
+// Posts que só existem no outro idioma aparecem à parte, marcados, sem tradução automática.
+const untranslated = await getUntranslated(collection, lang);
+const intro: Record<PostCollection, Record<Lang, string>> = {
+  research: {
+    en: 'Campaign reports and research built on my own infrastructure and public data. Campaign posts ship with machine-readable IoCs.',
+    'pt-br': 'Relatórios de campanha e pesquisas feitas com infraestrutura própria e dados públicos. Posts de campanha vêm com IoCs legíveis por máquina.',
+  },
+  walkthroughs: {
+    en: 'Step-by-step labs and writeups, indexed by technique and tool.',
+    'pt-br': 'Laboratórios e writeups passo a passo, indexados por técnica e ferramenta.',
+  },
+  notes: {
+    en: 'Short technical notes.',
+    'pt-br': 'Notas técnicas curtas.',
+  },
+};
+const title = t(lang, `nav.${collection}` as UiKey);
+---
+
+<BaseLayout
+  lang={lang}
+  title={title}
+  description={intro[collection][lang]}
+  path={routePath(collection, lang)}
+  alternates={routeAlternates(collection)}
+  active={collection}
+>
+  <h1>{title}</h1>
+  <p class="lead">{intro[collection][lang]}</p>
+  {
+    posts.length ? (
+      <ul class="post-list">
+        {posts.map((entry) => (
+          <PostListItem entry={entry} pageLang={lang} />
+        ))}
+      </ul>
+    ) : (
+      <p class="muted">{t(lang, 'list.empty')}</p>
+    )
+  }
+  {
+    untranslated.length > 0 && (
+      <section aria-labelledby="other-lang">
+        <h2 id="other-lang">{t(lang, 'lang.alsoOther')}</h2>
+        <ul class="post-list" lang={HTML_LANG[otherLang(lang)]}>
+          {untranslated.map((entry) => (
+            <PostListItem entry={entry} pageLang={lang} headingLevel={3} />
+          ))}
+        </ul>
+      </section>
+    )
+  }
+</BaseLayout>

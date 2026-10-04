@@ -1,0 +1,46 @@
+---
+import { getEntry, render } from 'astro:content';
+import type { Lang } from '../i18n/config.ts';
+import { routeAlternates, routePath } from '../i18n/routes.ts';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { SITE } from '../site.config.ts';
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+const entry = await getEntry('pages', `${lang}/about`);
+if (!entry) throw new Error(`src/content/pages/${lang}/about.mdx não existe`);
+const { Content } = await render(entry);
+const sameAs = [`https://github.com/${SITE.author.github}`, SITE.author.linkedin, SITE.author.medium].filter(Boolean);
+const jsonLd = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'ProfilePage',
+    inLanguage: lang === 'en' ? 'en' : 'pt-BR',
+    mainEntity: {
+      '@type': 'Person',
+      name: SITE.author.name,
+      url: new URL(routePath('about', lang), SITE.url).href,
+      sameAs,
+    },
+  },
+];
+---
+
+<BaseLayout
+  lang={lang}
+  title={entry.data.title}
+  description={entry.data.description}
+  path={routePath('about', lang)}
+  alternates={routeAlternates('about')}
+  ogType="profile"
+  jsonLd={jsonLd}
+  active="about"
+>
+  <article class="prose">
+    <h1>{entry.data.title}</h1>
+    <Content />
+  </article>
+</BaseLayout>
