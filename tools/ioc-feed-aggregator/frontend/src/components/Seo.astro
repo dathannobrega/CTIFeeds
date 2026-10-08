@@ -1,0 +1,146 @@
+---
+/**
+ * <head> completo: título, descrição, canonical, hreflang, Open Graph, Twitter e JSON-LD (@graph).
+ */
+import archivoLatin from '@fontsource-variable/archivo/files/archivo-latin-wdth-normal.woff2?url';
+import martianLatin from '@fontsource-variable/martian-mono/files/martian-mono-latin-wdth-normal.woff2?url';
+import { HTML_LANG, OG_LOCALE, otherLang, type Lang } from '../i18n/routes.ts';
+import { SITE } from '../site.ts';
+
+export interface Crumb {
+  name: string;
+  path: string;
+}
+
+export interface Props {
+  lang: Lang;
+  title: string;
+  description: string;
+  path: string;
+  alternates?: Record<Lang, string> | null;
+  noindex?: boolean;
+  ogType?: 'website' | 'article';
+  jsonLd?: Record<string, unknown>[];
+  breadcrumbs?: Crumb[];
+  homeLabel: string;
+}
+
+const { lang, title, description, path, alternates, noindex = false, ogType = 'website', jsonLd = [], breadcrumbs = [], homeLabel } =
+  Astro.props;
+
+const site = Astro.site ?? new URL('https://cti.segark.com');
+const abs = (p: string) => new URL(p, site).href;
+const canonical = abs(path);
+const ogImage = abs(`/og/og-${lang}.png`);
+const other = otherLang(lang);
+const orgId = abs('/#organization');
+const websiteId = abs('/#website');
+
+const graph: Record<string, unknown>[] = [
+  {
+    '@type': 'Organization',
+    '@id': orgId,
+    name: SITE.org,
+    url: abs('/'),
+    logo: { '@type': 'ImageObject', url: abs('/icon-512.png'), width: 512, height: 512 },
+    sameAs: [SITE.repo],
+  },
+  {
+    '@type': 'WebSite',
+    '@id': websiteId,
+    url: abs('/'),
+    name: SITE.name,
+    alternateName: `${SITE.wordmark.left}.${SITE.wordmark.right}`,
+    inLanguage: ['pt-BR', 'en'],
+    publisher: { '@id': orgId },
+    potentialAction: {
+      '@type': 'SearchAction',
+      target: { '@type': 'EntryPoint', urlTemplate: `${abs(lang === 'pt' ? '/consulta/' : '/en/lookup/')}?q={search_term_string}` },
+      'query-input': 'required name=search_term_string',
+    },
+  },
+  {
+    '@type': 'WebPage',
+    '@id': `${canonical}#webpage`,
+    url: canonical,
+    name: title,
+    description,
+    inLanguage: HTML_LANG[lang],
+    isPartOf: { '@id': websiteId },
+    publisher: { '@id': orgId },
+    primaryImageOfPage: { '@type': 'ImageObject', url: ogImage, width: 1200, height: 630 },
+    ...(breadcrumbs.length ? { breadcrumb: { '@id': `${canonical}#breadcrumb` } } : {}),
+  },
+];
+
+if (breadcrumbs.length) {
+  const items = [{ name: homeLabel, path: lang === 'pt' ? '/' : '/en/' }, ...breadcrumbs];
+  graph.push({
+    '@type': 'BreadcrumbList',
+    '@id': `${canonical}#breadcrumb`,
+    itemListElement: items.map((item, index) => ({
+      '@type': 'ListItem',
+      position: index + 1,
+      name: item.name,
+      item: abs(item.path),
+    })),
+  });
+}
+
+graph.push(...jsonLd);
+const structured = JSON.stringify({ '@context': 'https://schema.org', '@graph': graph }).replaceAll('<', '\\u003c');
+const fullTitle = path === '/' || path === '/en/' ? title : `${title} — ${SITE.name}`;
+---
+
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>{fullTitle}</title>
+<meta name="description" content={description} />
+<link rel="canonical" href={canonical} />
+{
+  alternates && (
+    <>
+      <link rel="alternate" hreflang="pt-BR" href={abs(alternates.pt)} />
+      <link rel="alternate" hreflang="en" href={abs(alternates.en)} />
+      <link rel="alternate" hreflang="x-default" href={abs(alternates.pt)} />
+    </>
+  )
+}
+<meta
+  name="robots"
+  content={noindex ? 'noindex, nofollow' : 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1'}
+/>
+<meta name="color-scheme" content="light dark" />
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#eeebe3" />
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0e0e0c" />
+<meta name="application-name" content={SITE.name} />
+<meta name="apple-mobile-web-app-title" content={SITE.name} />
+<meta name="format-detection" content="telephone=no" />
+<meta name="referrer" content="strict-origin-when-cross-origin" />
+
+<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+<link rel="icon" href="/favicon.ico" sizes="32x32" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+<link rel="manifest" href="/manifest.webmanifest" />
+<link rel="preload" href={archivoLatin} as="font" type="font/woff2" crossorigin />
+<link rel="preload" href={martianLatin} as="font" type="font/woff2" crossorigin />
+
+<meta property="og:site_name" content={SITE.name} />
+<meta property="og:type" content={ogType} />
+<meta property="og:title" content={title} />
+<meta property="og:description" content={description} />
+<meta property="og:url" content={canonical} />
+<meta property="og:locale" content={OG_LOCALE[lang]} />
+{alternates && <meta property="og:locale:alternate" content={OG_LOCALE[other]} />}
+<meta property="og:image" content={ogImage} />
+<meta property="og:image:type" content="image/png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content={title} />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content={title} />
+<meta name="twitter:description" content={description} />
+<meta name="twitter:image" content={ogImage} />
+
+<script is:inline src="/theme.js"></script>
+<script type="application/ld+json" set:html={structured} />

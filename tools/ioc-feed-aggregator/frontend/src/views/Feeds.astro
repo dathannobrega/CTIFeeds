@@ -1,0 +1,295 @@
+---
+import Layout from '../layouts/Layout.astro';
+import PageHead from '../components/PageHead.astro';
+import Section from '../components/Section.astro';
+import FeedStub from '../components/FeedStub.astro';
+import CodeBlock from '../components/CodeBlock.astro';
+import TypeTag from '../components/TypeTag.astro';
+import { routePath, type Lang } from '../i18n/routes.ts';
+import { t } from '../i18n/ui.ts';
+import { FEED_PATHS, INDICATOR_TYPES, SITE } from '../site.ts';
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+const site = String(Astro.site ?? 'https://cti.segark.com').replace(/\/$/, '');
+const copy = t(lang, 'action.copy');
+
+const C = {
+  pt: {
+    title: 'Feeds de IoC em texto puro: URLs, domínios e IPv4',
+    description:
+      'Baixe os feeds gratuitos de URLs, domínios e endereços IPv4 maliciosos: um indicador por linha, atualizados a cada hora, com checksums SHA-256 e suporte a requisições condicionais.',
+    kicker: 'Feeds',
+    h1: 'Feeds de IoC em texto puro',
+    lede: 'Três arquivos públicos, um por tipo de indicador. Aponte o firewall, o resolvedor DNS ou o SIEM para a URL e pronto.',
+    stubs: {
+      url: { title: 'URLs maliciosas', blurb: 'Phishing, distribuição de malware e C2, com esquema e caminho.' },
+      domain: { title: 'Domínios', blurb: 'Nomes em minúsculas para DNS sinkhole, DNS Filter e RPZ.' },
+      ipv4: { title: 'Endereços IPv4', blurb: 'IPs canônicos para listas de bloqueio, ipset e nftables.' },
+    },
+    formatLabel: 'Formato',
+    formatTitle: 'O que tem em cada arquivo',
+    formatLede: 'UTF-8, uma entrada por linha, ordem lexicográfica, quebra de linha no fim. Sem cabeçalho, sem comentários.',
+    cols: ['Tipo', 'URL do arquivo', 'Exemplo (defanged)', 'Regras de validação'],
+    rules: {
+      url: 'Precisa de esquema e host. Mantida como publicada pela fonte.',
+      domain: 'Minúsculas, sem espaços nem barras.',
+      ipv4: 'Endereço IPv4 válido, reescrito na forma canônica.',
+    },
+    consumeLabel: 'Consumo',
+    consumeTitle: 'Baixe só quando mudar',
+    consumeLede:
+      'Os arquivos têm ETag e Last-Modified. Requisições condicionais devolvem 304 quando nada mudou, economizando banda dos dois lados.',
+    curl: 'curl com requisição condicional',
+    wget: 'wget mantendo o arquivo local',
+    pwsh: 'PowerShell',
+    python: 'Python',
+    integrityLabel: 'Integridade',
+    integrityTitle: 'Confira o que chegou',
+    integrityLede:
+      'A cada publicação o arquivo SHA256SUMS é regenerado. Valide antes de carregar a lista num equipamento de produção.',
+    sums: 'Verificar os três arquivos',
+    policyLabel: 'Uso',
+    policyTitle: 'Política de uso',
+    policy: [
+      'Acesso livre e sem cadastro. Os indicadores vêm de fontes públicas e seguem as condições de uso de cada uma, listadas na página de fontes.',
+      'A coleta acontece a cada hora; buscar com mais frequência não traz dados mais novos. Prefira requisições condicionais.',
+      'Os feeds são fornecidos como estão, sem garantia. Comece monitorando antes de bloquear e mantenha uma lista de exceções local.',
+      'Encontrou um falso positivo? Confirme na consulta e abra um relato no repositório: após a revisão, a remoção vale para todos na hora.',
+    ],
+    report: 'Reportar falso positivo',
+    datasetName: 'Segark CTI — feeds de indicadores de comprometimento',
+  },
+  en: {
+    title: 'Plain-text IoC feeds: URLs, domains and IPv4',
+    description:
+      'Download the free feeds of malicious URLs, domains and IPv4 addresses: one indicator per line, refreshed hourly, with SHA-256 checksums and conditional request support.',
+    kicker: 'Feeds',
+    h1: 'Plain-text IoC feeds',
+    lede: 'Three public files, one per indicator type. Point your firewall, DNS resolver or SIEM at the URL and you are done.',
+    stubs: {
+      url: { title: 'Malicious URLs', blurb: 'Phishing, malware distribution and C2, with scheme and path.' },
+      domain: { title: 'Domains', blurb: 'Lower-cased names for DNS sinkholes, DNS Filter and RPZ.' },
+      ipv4: { title: 'IPv4 addresses', blurb: 'Canonical IPs for blocklists, ipset and nftables.' },
+    },
+    formatLabel: 'Format',
+    formatTitle: 'What each file holds',
+    formatLede: 'UTF-8, one entry per line, lexicographic order, trailing newline. No header, no comments.',
+    cols: ['Type', 'File URL', 'Example (defanged)', 'Validation rules'],
+    rules: {
+      url: 'Must have a scheme and host. Kept as published by the source.',
+      domain: 'Lower case, no spaces or slashes.',
+      ipv4: 'Valid IPv4 address, rewritten in canonical form.',
+    },
+    consumeLabel: 'Consuming',
+    consumeTitle: 'Download only when it changes',
+    consumeLede:
+      'Files carry ETag and Last-Modified. Conditional requests return 304 when nothing changed, saving bandwidth on both ends.',
+    curl: 'curl with a conditional request',
+    wget: 'wget keeping a local copy',
+    pwsh: 'PowerShell',
+    python: 'Python',
+    integrityLabel: 'Integrity',
+    integrityTitle: 'Check what you received',
+    integrityLede:
+      'SHA256SUMS is regenerated on every publication. Validate before loading the list into a production device.',
+    sums: 'Verify all three files',
+    policyLabel: 'Usage',
+    policyTitle: 'Usage policy',
+    policy: [
+      'Open access, no sign-up. Indicators come from public sources and follow each source’s terms of use, listed on the sources page.',
+      'Collection runs hourly; fetching more often brings no fresher data. Prefer conditional requests.',
+      'The feeds are provided as is, without warranty. Start by monitoring before blocking and keep a local allow list.',
+      'Found a false positive? Confirm it with the lookup and open a report in the repository: once reviewed, the removal applies to everyone immediately.',
+    ],
+    report: 'Report a false positive',
+    datasetName: 'Segark CTI — indicators of compromise feeds',
+  },
+}[lang];
+
+const examples = {
+  url: 'hxxps://login-portal[.]example/verify.php',
+  domain: 'update-billing[.]example',
+  ipv4: '203.0.113[.]42',
+};
+
+const codes = {
+  curl: `curl -fsS -z ipv4.txt -o ipv4.txt ${site}${FEED_PATHS.ipv4}`,
+  wget: `wget -N ${site}${FEED_PATHS.domain}`,
+  pwsh: `Invoke-WebRequest -Uri "${site}${FEED_PATHS.url}" -OutFile urls.txt`,
+  python: `import requests
+
+resp = requests.get("${site}${FEED_PATHS.ipv4}", timeout=30)
+resp.raise_for_status()
+blocklist = set(resp.text.split())
+print(len(blocklist), "IPs")`,
+  sums: `for f in urls.txt domains.txt ipv4.txt; do curl -fsSO ${site}/feeds/$f; done
+curl -fsS ${site}/feeds/SHA256SUMS | sha256sum -c -`,
+};
+
+const jsonLd = [
+  {
+    '@type': 'Dataset',
+    '@id': `${site}${routePath('feeds', lang)}#dataset`,
+    name: C.datasetName,
+    description: C.description,
+    url: `${site}${routePath('feeds', lang)}`,
+    inLanguage: lang === 'pt' ? 'pt-BR' : 'en',
+    isAccessibleForFree: true,
+    keywords: ['threat intelligence', 'IoC', 'blocklist', 'malicious URLs', 'malicious domains', 'IPv4 blocklist', 'CTI'],
+    creator: { '@id': `${site}/#organization` },
+    publisher: { '@id': `${site}/#organization` },
+    distribution: INDICATOR_TYPES.map((type) => ({
+      '@type': 'DataDownload',
+      encodingFormat: 'text/plain',
+      contentUrl: `${site}${FEED_PATHS[type]}`,
+      name: FEED_PATHS[type].split('/').pop(),
+    })),
+  },
+];
+---
+
+<Layout
+  lang={lang}
+  title={C.title}
+  description={C.description}
+  path={routePath('feeds', lang)}
+  alternates={{ pt: routePath('feeds', 'pt'), en: routePath('feeds', 'en') }}
+  active="feeds"
+  breadcrumbs={[{ name: C.kicker, path: routePath('feeds', lang) }]}
+  jsonLd={jsonLd}
+>
+  <PageHead kicker={C.kicker} title={C.h1} lede={C.lede}>
+    <div class="stubs">
+      {
+        INDICATOR_TYPES.map((type, index) => (
+          <FeedStub lang={lang} type={type} index={index + 1} title={C.stubs[type].title} blurb={C.stubs[type].blurb} />
+        ))
+      }
+    </div>
+  </PageHead>
+
+  <Section id="format" num="01" label={C.formatLabel} title={C.formatTitle} lede={C.formatLede}>
+    <div class="table-scroll">
+      <table class="data-table">
+        <thead>
+          <tr>{C.cols.map((col) => <th scope="col">{col}</th>)}</tr>
+        </thead>
+        <tbody>
+          {
+            INDICATOR_TYPES.map((type) => (
+              <tr>
+                <td>
+                  <TypeTag type={type} />
+                </td>
+                <td class="value">
+                  <a href={FEED_PATHS[type]} rel="nofollow">
+                    {FEED_PATHS[type]}
+                  </a>
+                </td>
+                <td class="value">{examples[type]}</td>
+                <td class="rule">{C.rules[type]}</td>
+              </tr>
+            ))
+          }
+        </tbody>
+      </table>
+    </div>
+  </Section>
+
+  <Section id="consume" num="02" label={C.consumeLabel} title={C.consumeTitle} lede={C.consumeLede}>
+    <div class="codes">
+      <CodeBlock label={C.curl} code={codes.curl} copyLabel={copy} lang="sh" />
+      <CodeBlock label={C.wget} code={codes.wget} copyLabel={copy} lang="sh" />
+      <CodeBlock label={C.pwsh} code={codes.pwsh} copyLabel={copy} lang="powershell" />
+      <CodeBlock label={C.python} code={codes.python} copyLabel={copy} lang="python" />
+    </div>
+  </Section>
+
+  <Section id="integrity" num="03" label={C.integrityLabel} title={C.integrityTitle} lede={C.integrityLede}>
+    <div class="narrow">
+      <CodeBlock label={C.sums} code={codes.sums} copyLabel={copy} lang="sh" />
+    </div>
+  </Section>
+
+  <Section id="policy" num="04" label={C.policyLabel} title={C.policyTitle}>
+    <ol class="policy">
+      {C.policy.map((item) => <li>{item}</li>)}
+    </ol>
+    <p class="report">
+      <a class="btn" href={SITE.issues} rel="noopener">{C.report}<span class="arrow" aria-hidden="true">↗</span></a>
+    </p>
+  </Section>
+</Layout>
+
+<style>
+  .stubs {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: clamp(1rem, 2vw, 1.5rem);
+    margin-top: clamp(2rem, 4vw, 3rem);
+  }
+
+  .rule {
+    font-family: var(--font-sans);
+    font-size: 0.875rem;
+    min-width: 16rem;
+  }
+
+  .codes {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+  }
+
+  .narrow {
+    max-width: 56rem;
+  }
+
+  .policy {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    counter-reset: policy;
+    border-top: 1.5px solid var(--fg);
+  }
+
+  .policy li {
+    display: grid;
+    grid-template-columns: 3.5rem minmax(0, 1fr);
+    gap: 1rem;
+    padding: 1.1rem 0;
+    border-bottom: 1px solid var(--line-soft);
+    counter-increment: policy;
+    max-width: none;
+  }
+
+  .policy li::before {
+    content: counter(policy, decimal-leading-zero);
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--signal-ink);
+    padding-top: 0.2rem;
+  }
+
+  .report {
+    margin-top: 1.75rem;
+  }
+
+  @media (max-width: 1100px) {
+    .stubs {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 760px) {
+    .stubs,
+    .codes {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+</style>

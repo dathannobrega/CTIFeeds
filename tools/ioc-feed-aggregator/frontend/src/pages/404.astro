@@ -1,0 +1,61 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { routePath } from '../i18n/routes.ts';
+---
+
+<Layout
+  lang="pt"
+  title="Página não encontrada · Page not found"
+  description="A página procurada não existe. The page you are looking for does not exist."
+  path="/404/"
+  noindex
+>
+  <section class="wrap nf" aria-labelledby="nf-title">
+    <p class="kicker">HTTP 404</p>
+    <p class="code" aria-hidden="true">4<span>[.]</span>4</p>
+    <h1 id="nf-title">Página não encontrada</h1>
+    <p class="lede" lang="en">Page not found.</p>
+    <p class="muted">Este endereço foi neutralizado, como um bom IoC. · This address was defanged, like any good IoC.</p>
+    <div class="links">
+      <a class="btn btn--solid" href={routePath('home', 'pt')}>Início</a>
+      <a class="btn" href={routePath('feeds', 'pt')}>Feeds</a>
+      <a class="btn" href={routePath('lookup', 'pt')}>Consulta</a>
+      <a class="btn" href={routePath('home', 'en')} lang="en">English</a>
+    </div>
+  </section>
+</Layout>
+
+<style>
+  .nf {
+    padding-block: clamp(2rem, 6vw, 5rem);
+  }
+
+  .code {
+    margin: 1rem 0 0;
+    max-width: none;
+    font-size: clamp(7rem, 30vw, 24rem);
+    font-weight: 900;
+    font-stretch: 62%;
+    line-height: 0.8;
+    letter-spacing: -0.04em;
+  }
+
+  .code span {
+    color: var(--signal);
+  }
+
+  h1 {
+    margin-top: 2rem;
+  }
+
+  .lede {
+    margin-top: 0.75rem;
+  }
+
+  .links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    margin-top: 2rem;
+  }
+</style>

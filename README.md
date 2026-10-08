@@ -9,8 +9,9 @@ JSON por idioma e IoCs legíveis por máquina (CSV, listas TXT e STIX 2.1) gerad
 - O build é o único caminho até a produção: valida conteúdo, IoCs, TLP, termos proibidos, EXIF,
   `hreflang`, orçamento de 100 KB por página e vazamento de IoC sem defang.
 
-> O agregador de feeds em Flask que existia neste repositório foi movido para
-> [`tools/ioc-feed-aggregator/`](tools/ioc-feed-aggregator/) e aparece na página de Projetos.
+> O agregador de feeds de IoC fica em [`tools/ioc-feed-aggregator/`](tools/ioc-feed-aggregator/): é um
+> serviço independente deste site (API Flask + PostgreSQL + frontend próprio em Astro/nginx), publicado
+> em `https://cti.segark.com`, com Docker Compose e CI próprios.
 
 ## Começando
 
@@ -187,7 +188,7 @@ scripts/                   validate, check-dist, check-headers, new-post, audit,
 tests/                     testes unitários (node:test)
 public/_headers            CSP e demais headers
 wrangler.jsonc             deploy no Workers
-tools/ioc-feed-aggregator/ projeto legado (Flask + PostgreSQL)
+tools/ioc-feed-aggregator/ serviço de feeds de IoC (cti.segark.com): API, frontend e compose próprios
 ```
 
 ## O que você precisa preencher

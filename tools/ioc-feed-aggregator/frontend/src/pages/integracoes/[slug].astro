@@ -1,0 +1,12 @@
+---
+import Integration from '../../views/Integration.astro';
+import { INTEGRATIONS, type Integration as Item } from '../../data/integrations.ts';
+
+export function getStaticPaths() {
+  return INTEGRATIONS.map((integration) => ({ params: { slug: integration.slug }, props: { integration } }));
+}
+
+const { integration } = Astro.props as { integration: Item };
+---
+
+<Integration lang="pt" integration={integration} />

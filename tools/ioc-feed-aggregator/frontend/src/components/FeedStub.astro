@@ -1,0 +1,195 @@
+---
+/** "Canhoto" de um feed: contagem ao vivo, metadados e ações, com picote antes dos botões. */
+import TypeTag from './TypeTag.astro';
+import type { Lang } from '../i18n/routes.ts';
+import { FEED_PATHS, type IndicatorType } from '../site.ts';
+
+interface Props {
+  lang: Lang;
+  type: IndicatorType;
+  index: number;
+  title: string;
+  blurb: string;
+}
+
+const { lang, type, index, title, blurb } = Astro.props;
+const path = FEED_PATHS[type];
+const site = String(Astro.site ?? 'https://cti.segark.com').replace(/\/$/, '');
+const file = path.split('/').pop();
+const L =
+  lang === 'pt'
+    ? { file: 'Arquivo', size: 'Tamanho', raw: 'Coletados', excluded: 'Excluídos', download: 'Baixar', copy: 'Copiar URL', active: 'ativos' }
+    : { file: 'File', size: 'Size', raw: 'Collected', excluded: 'Excluded', download: 'Download', copy: 'Copy URL', active: 'active' };
+---
+
+<article class="stub" aria-labelledby={`stub-${type}`}>
+  <div class="top">
+    <TypeTag type={type} />
+    <span class="idx mono">{String(index).padStart(2, '0')}/03</span>
+  </div>
+  <h3 id={`stub-${type}`}>{title}</h3>
+  <p class="count">
+    <span data-stat={`feeds.${type}.count`} data-fmt="number" data-scramble>—</span>
+    <span class="unit mono">{L.active}</span>
+  </p>
+  <p class="blurb">{blurb}</p>
+  <dl class="meta">
+    <div><dt>{L.file}</dt><dd>{file}</dd></div>
+    <div><dt>{L.size}</dt><dd data-stat={`feeds.${type}.bytes`} data-fmt="bytes">—</dd></div>
+    <div><dt>{L.raw}</dt><dd data-stat={`feeds.${type}.raw_count`} data-fmt="number">—</dd></div>
+    <div><dt>{L.excluded}</dt><dd data-stat={`feeds.${type}.excluded`} data-fmt="number">—</dd></div>
+    <div class="hash"><dt>SHA-256</dt><dd data-stat={`feeds.${type}.sha256`} data-fmt="hash">—</dd></div>
+  </dl>
+  <div class="perf" aria-hidden="true"></div>
+  <div class="actions">
+    <a class="btn btn--solid" href={path} download rel="nofollow">
+      {L.download}<span class="arrow" aria-hidden="true">↓</span>
+    </a>
+    <button class="btn" type="button" data-copy={`${site}${path}`}>
+      <span data-copy-label>{L.copy}</span>
+    </button>
+  </div>
+</article>
+
+<style>
+  .stub {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    border: 1.5px solid var(--fg);
+    background: var(--bg);
+    transition: transform 0.25s var(--ease);
+  }
+
+  .stub::before {
+    content: '';
+    position: absolute;
+    inset: -1.5px -1.5px auto;
+    height: 6px;
+    background: var(--fg);
+    transform: scaleY(0);
+    transform-origin: top;
+    transition: transform 0.2s var(--ease), background-color 0.2s;
+  }
+
+  .stub:hover::before,
+  .stub:focus-within::before {
+    transform: scaleY(1);
+    background: var(--signal);
+  }
+
+  .top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.1rem 1.25rem 0;
+  }
+
+  .idx {
+    font-size: 0.6875rem;
+    color: var(--fg-2);
+  }
+
+  h3 {
+    padding: 1.25rem 1.25rem 0;
+  }
+
+  .count {
+    display: flex;
+    align-items: baseline;
+    gap: 0.6rem;
+    margin: 0.5rem 0 0;
+    padding: 0 1.25rem;
+    font-size: clamp(2.75rem, 5vw, 4.25rem);
+    font-weight: 800;
+    font-stretch: 62%;
+    line-height: 1;
+    letter-spacing: -0.01em;
+  }
+
+  .unit {
+    font-size: 0.6875rem;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--fg-2);
+  }
+
+  .blurb {
+    margin: 0.85rem 0 0;
+    padding: 0 1.25rem;
+    font-size: 0.9375rem;
+    color: var(--fg-2);
+  }
+
+  .meta {
+    margin: 1.25rem 0 0;
+    padding: 0 1.25rem 1.25rem;
+    font-family: var(--font-mono);
+    font-stretch: 87.5%;
+    font-size: 0.71875rem;
+  }
+
+  .meta div {
+    display: grid;
+    grid-template-columns: 6.5rem 1fr;
+    gap: 0.5rem;
+    padding: 0.4rem 0;
+    border-top: 1px solid var(--line-soft);
+  }
+
+  dt {
+    color: var(--fg-2);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-size: 0.625rem;
+    padding-top: 0.1rem;
+  }
+
+  dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Picote: linha tracejada com meias-luas recortadas nas bordas. */
+  .perf {
+    position: relative;
+    height: 0;
+    margin: auto 0 0;
+    border-top: 1.5px dashed var(--fg);
+  }
+
+  .perf::before,
+  .perf::after {
+    content: '';
+    position: absolute;
+    top: -10px;
+    width: 18px;
+    height: 18px;
+    border: 1.5px solid var(--fg);
+    border-radius: 50%;
+    background: var(--bg-section, var(--bg));
+  }
+
+  .perf::before {
+    left: -10px;
+    clip-path: inset(0 0 0 50%);
+  }
+
+  .perf::after {
+    right: -10px;
+    clip-path: inset(0 50% 0 0);
+  }
+
+  .actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.6rem;
+    padding: 1.1rem 1.25rem 1.25rem;
+  }
+
+  .actions .btn {
+    padding-inline: 0.6rem;
+  }
+</style>

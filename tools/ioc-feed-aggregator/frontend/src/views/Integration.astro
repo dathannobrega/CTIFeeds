@@ -1,0 +1,342 @@
+---
+import Layout from '../layouts/Layout.astro';
+import PageHead from '../components/PageHead.astro';
+import Section from '../components/Section.astro';
+import CodeBlock from '../components/CodeBlock.astro';
+import TypeTag from '../components/TypeTag.astro';
+import { INTEGRATIONS, type Integration } from '../data/integrations.ts';
+import { integrationPath, routePath, type Lang } from '../i18n/routes.ts';
+import { t } from '../i18n/ui.ts';
+import { plain, rich, withSite } from '../lib/rich.ts';
+import { FEED_PATHS } from '../site.ts';
+
+interface Props {
+  lang: Lang;
+  integration: Integration;
+}
+
+const { lang, integration: item } = Astro.props;
+const site = String(Astro.site ?? 'https://cti.segark.com').replace(/\/$/, '');
+const path = integrationPath(item.slug, lang);
+const others = INTEGRATIONS.filter((other) => other.slug !== item.slug);
+
+const C = {
+  pt: {
+    kicker: 'Integração',
+    integrations: 'Integrações',
+    feedsLabel: 'Feeds',
+    feedsTitle: 'URLs usadas neste guia',
+    stepsLabel: 'Passos',
+    stepsTitle: 'Passo a passo',
+    codeLabel: 'Código',
+    codeTitle: 'Configuração pronta',
+    notesLabel: 'Notas',
+    notesTitle: 'Antes de pôr em produção',
+    othersLabel: 'Veja também',
+    othersTitle: 'Outras integrações',
+    mechanism: 'Mecanismo',
+  },
+  en: {
+    kicker: 'Integration',
+    integrations: 'Integrations',
+    feedsLabel: 'Feeds',
+    feedsTitle: 'URLs used in this guide',
+    stepsLabel: 'Steps',
+    stepsTitle: 'Step by step',
+    codeLabel: 'Code',
+    codeTitle: 'Ready-made configuration',
+    notesLabel: 'Notes',
+    notesTitle: 'Before going to production',
+    othersLabel: 'See also',
+    othersTitle: 'Other integrations',
+    mechanism: 'Mechanism',
+  },
+}[lang];
+
+const steps = item.steps[lang].map((step) => rich(withSite(step, site)));
+const description = plain(item.description[lang]);
+const jsonLd = [
+  {
+    '@type': 'TechArticle',
+    '@id': `${site}${path}#article`,
+    headline: plain(item.title[lang]),
+    description,
+    inLanguage: lang === 'pt' ? 'pt-BR' : 'en',
+    url: `${site}${path}`,
+    mainEntityOfPage: { '@id': `${site}${path}#webpage` },
+    author: { '@id': `${site}/#organization` },
+    publisher: { '@id': `${site}/#organization` },
+    about: [{ '@type': 'SoftwareApplication', name: item.vendor, applicationCategory: 'SecurityApplication' }],
+    proficiencyLevel: 'Beginner',
+  },
+  {
+    '@type': 'HowTo',
+    '@id': `${site}${path}#howto`,
+    name: plain(item.title[lang]),
+    description,
+    inLanguage: lang === 'pt' ? 'pt-BR' : 'en',
+    step: item.steps[lang].map((step, index) => ({
+      '@type': 'HowToStep',
+      position: index + 1,
+      text: plain(withSite(step, site)),
+    })),
+  },
+];
+---
+
+<Layout
+  lang={lang}
+  title={plain(item.title[lang])}
+  description={description}
+  path={path}
+  alternates={{ pt: integrationPath(item.slug, 'pt'), en: integrationPath(item.slug, 'en') }}
+  active="integrations"
+  ogType="article"
+  breadcrumbs={[
+    { name: C.integrations, path: routePath('integrations', lang) },
+    { name: item.name, path },
+  ]}
+  jsonLd={jsonLd}
+>
+  <PageHead kicker={`${C.kicker} · ${item.vendor}`} title={plain(item.title[lang])} lede={item.intro[lang]}>
+    <dl class="facts">
+      <div>
+        <dt>{C.mechanism}</dt>
+        <dd>{item.mechanism[lang]}</dd>
+      </div>
+      <div>
+        <dt>{C.feedsLabel}</dt>
+        <dd class="tags">{item.feeds.map((type) => <TypeTag type={type} />)}</dd>
+      </div>
+    </dl>
+  </PageHead>
+
+  <Section id="feeds" num="01" label={C.feedsLabel} title={C.feedsTitle}>
+    <ul class="urls">
+      {
+        item.feeds.map((type) => (
+          <li>
+            <TypeTag type={type} />
+            <code class="url">{`${site}${FEED_PATHS[type]}`}</code>
+            <button class="btn btn--small" type="button" data-copy={`${site}${FEED_PATHS[type]}`}>
+              <span data-copy-label>{t(lang, 'action.copy')}</span>
+            </button>
+          </li>
+        ))
+      }
+    </ul>
+  </Section>
+
+  <Section id="steps" num="02" label={C.stepsLabel} title={C.stepsTitle}>
+    <ol class="steps">
+      {steps.map((step) => <li><span set:html={step} /></li>)}
+    </ol>
+  </Section>
+
+  <Section id="code" num="03" label={C.codeLabel} title={C.codeTitle}>
+    <div class="codes">
+      {
+        item.code.map((block) => (
+          <CodeBlock label={block.label[lang]} code={withSite(block.body, site)} copyLabel={t(lang, 'action.copy')} lang={block.lang} />
+        ))
+      }
+    </div>
+  </Section>
+
+  <Section id="notes" num="04" label={C.notesLabel} title={C.notesTitle}>
+    <ul class="notes">
+      {item.notes[lang].map((note) => <li set:html={rich(note)} />)}
+    </ul>
+  </Section>
+
+  <Section id="others" num="05" label={C.othersLabel} title={C.othersTitle}>
+    <ul class="others">
+      {
+        others.map((other) => (
+          <li>
+            <a href={integrationPath(other.slug, lang)}>
+              <span class="o-name">{other.name}</span>
+              <span class="o-mech mono">{other.mechanism[lang]}</span>
+              <span aria-hidden="true">→</span>
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+  </Section>
+</Layout>
+
+<style>
+  .facts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 3rem;
+    margin: clamp(1.5rem, 3vw, 2.25rem) 0 0;
+    padding-top: 0.9rem;
+    border-top: 3px solid var(--fg);
+  }
+
+  .facts dt {
+    font-family: var(--font-mono);
+    font-stretch: 87.5%;
+    font-size: 0.625rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--fg-2);
+  }
+
+  .facts dd {
+    margin: 0.35rem 0 0;
+    font-weight: 600;
+  }
+
+  .tags {
+    display: flex;
+    gap: 0.3rem;
+  }
+
+  .urls {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    border-top: 1.5px solid var(--fg);
+  }
+
+  .urls li {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 1rem;
+    align-items: center;
+    padding: 0.85rem 0;
+    border-bottom: 1px solid var(--line-soft);
+  }
+
+  .url {
+    background: none;
+    border: 0;
+    padding: 0;
+    font-size: 0.875rem;
+    overflow-wrap: anywhere;
+  }
+
+  .steps {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    counter-reset: step;
+  }
+
+  .steps li {
+    position: relative;
+    display: grid;
+    grid-template-columns: clamp(3.5rem, 7vw, 5.5rem) minmax(0, 1fr);
+    gap: 1rem;
+    padding: 1.25rem 0;
+    border-top: 1px solid var(--line-soft);
+    counter-increment: step;
+    max-width: none;
+    font-size: 1.0625rem;
+  }
+
+  .steps li::before {
+    content: counter(step, decimal-leading-zero);
+    font-size: clamp(2.5rem, 4.5vw, 3.75rem);
+    font-weight: 800;
+    font-stretch: 62%;
+    line-height: 0.8;
+    color: transparent;
+    -webkit-text-stroke: 1.5px var(--fg);
+  }
+
+  .steps li:hover::before {
+    color: var(--signal);
+    -webkit-text-stroke-color: var(--signal);
+  }
+
+  .codes {
+    display: grid;
+    gap: 1.25rem;
+    max-width: 62rem;
+  }
+
+  .notes {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    border-top: 1.5px solid var(--fg);
+  }
+
+  .notes li {
+    position: relative;
+    padding: 1rem 0 1rem 2rem;
+    border-bottom: 1px solid var(--line-soft);
+    max-width: none;
+  }
+
+  .notes li::before {
+    content: '!';
+    position: absolute;
+    left: 0;
+    top: 1rem;
+    width: 1.25rem;
+    height: 1.25rem;
+    display: grid;
+    place-items: center;
+    background: var(--signal);
+    color: var(--on-signal);
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    font-weight: 700;
+  }
+
+  .others {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+    gap: 0;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    border-top: 1.5px solid var(--fg);
+    border-left: 1px solid var(--line-soft);
+  }
+
+  .others a {
+    display: grid;
+    gap: 0.35rem;
+    height: 100%;
+    padding: 1.1rem 1.1rem 1.25rem;
+    border-right: 1px solid var(--line-soft);
+    border-bottom: 1px solid var(--line-soft);
+    text-decoration: none;
+  }
+
+  .others a:hover {
+    background: var(--fg);
+    color: var(--bg);
+    --fg-2: var(--bg-3);
+  }
+
+  .o-name {
+    font-size: 1.4rem;
+    font-weight: 800;
+    font-stretch: 70%;
+    text-transform: uppercase;
+    line-height: 1;
+  }
+
+  .o-mech {
+    font-size: 0.6875rem;
+    color: var(--fg-2);
+  }
+
+  @media (max-width: 640px) {
+    .urls li {
+      grid-template-columns: auto minmax(0, 1fr);
+    }
+
+    .urls .btn {
+      grid-column: 2;
+      justify-self: start;
+    }
+  }
+</style>

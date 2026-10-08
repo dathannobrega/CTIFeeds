@@ -1,0 +1,12 @@
+---
+import type { IndicatorType } from '../site.ts';
+
+interface Props {
+  type: IndicatorType;
+}
+
+const { type } = Astro.props;
+const label = { url: 'URL', domain: 'DOM', ipv4: 'IPv4' }[type];
+---
+
+<span class:list={['tag', `tag--${type}`]}>{label}</span>

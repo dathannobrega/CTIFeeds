@@ -1,0 +1,80 @@
+name: IoC feed aggregator
+
+on:
+  pull_request:
+    paths:
+      - 'tools/ioc-feed-aggregator/**'
+      - '.github/workflows/ioc-feed-aggregator.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'tools/ioc-feed-aggregator/**'
+      - '.github/workflows/ioc-feed-aggregator.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ioc-feed-aggregator-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  api:
+    name: API (pytest)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: tools/ioc-feed-aggregator
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: tools/ioc-feed-aggregator/requirements*.txt
+      - run: pip install -r requirements-dev.txt
+      - run: python -m pytest
+
+  frontend:
+    name: Frontend (tipos + build + SEO/CSP)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: tools/ioc-feed-aggregator/frontend/.nvmrc
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            tools/ioc-feed-aggregator/frontend/package-lock.json
+      # O Vite 8 lê o tsconfig.json da raiz do repositório, que estende astro/tsconfigs/strict:
+      # as dependências da raiz precisam estar instaladas (o build Docker não é afetado).
+      - run: npm ci --ignore-scripts
+      - run: npm ci
+        working-directory: tools/ioc-feed-aggregator/frontend
+      - run: npm run check
+        working-directory: tools/ioc-feed-aggregator/frontend
+      # astro build + scripts/check-dist.mjs (title, description, canonical, hreflang, JSON-LD, CSP)
+      - run: npm run build
+        working-directory: tools/ioc-feed-aggregator/frontend
+
+  docker:
+    name: Imagens Docker
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Validar docker-compose.yml
+        run: docker compose -f tools/ioc-feed-aggregator/docker-compose.yml config -q
+      - name: Build da API
+        run: docker build -t ioc-web tools/ioc-feed-aggregator
+      - name: Build do frontend
+        run: docker build -t ioc-frontend tools/ioc-feed-aggregator/frontend
+      # O entrypoint gera a configuração a partir do template e roda `nginx -t`.
+      - name: Configuração do nginx
+        run: docker run --rm ioc-frontend nginx -t

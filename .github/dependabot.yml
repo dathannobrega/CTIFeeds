@@ -18,6 +18,32 @@ updates:
       # Tipos do Node alinhados com o runtime fixado no .nvmrc (Node 22).
       - dependency-name: '@types/node'
         update-types: ['version-update:semver-major']
+  # Serviço de feeds de IoC (tools/ioc-feed-aggregator).
+  - package-ecosystem: npm
+    directory: /tools/ioc-feed-aggregator/frontend
+    schedule:
+      interval: weekly
+    groups:
+      astro:
+        patterns: ['astro', '@astrojs/*']
+      minor-and-patch:
+        update-types: [minor, patch]
+    ignore:
+      - dependency-name: typescript
+        update-types: ['version-update:semver-major']
+  - package-ecosystem: pip
+    directory: /tools/ioc-feed-aggregator
+    schedule:
+      interval: weekly
+    groups:
+      minor-and-patch:
+        update-types: [minor, patch]
+  - package-ecosystem: docker
+    directories:
+      - /tools/ioc-feed-aggregator
+      - /tools/ioc-feed-aggregator/frontend
+    schedule:
+      interval: weekly
   - package-ecosystem: github-actions
     directory: /
     schedule:

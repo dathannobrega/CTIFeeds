@@ -1,0 +1,47 @@
+---
+/** cti[.]segark — o nome do serviço escrito como um IoC "defanged". */
+import { SITE } from '../site.ts';
+
+interface Props {
+  size?: 'normal' | 'giant';
+}
+
+const { size = 'normal' } = Astro.props;
+---
+
+<span class:list={['wordmark', size]}>
+  <span>{SITE.wordmark.left}</span><span class="dot">[.]</span><span>{SITE.wordmark.right}</span>
+</span>
+
+<style>
+  .wordmark {
+    display: inline-flex;
+    align-items: baseline;
+    font-family: var(--font-mono);
+    font-stretch: 100%;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    white-space: nowrap;
+  }
+
+  .dot {
+    color: var(--signal-ink);
+    letter-spacing: -0.08em;
+    margin: 0 0.04em;
+  }
+
+  .giant {
+    font-family: var(--font-sans);
+    font-stretch: 62%;
+    font-weight: 900;
+    font-size: clamp(3rem, 16.6vw, 15.25rem);
+    line-height: 0.78;
+    letter-spacing: -0.03em;
+    text-transform: uppercase;
+  }
+
+  .giant .dot {
+    color: var(--signal);
+    letter-spacing: -0.02em;
+  }
+</style>

@@ -1,12 +1,17 @@
 """Exclusion list model."""
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 from sqlalchemy import Column, DateTime, Integer, String, UniqueConstraint
 
 from . import Base
+
+
+def _utc_now() -> datetime:
+    """UTC sem fuso (a coluna é ``DateTime`` simples, como antes)."""
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class Exclusion(Base):
@@ -20,7 +25,7 @@ class Exclusion(Base):
     id: Any = Column(Integer, primary_key=True)
     indicator_type: Any = Column(String(16), nullable=False)
     value: Any = Column(String(512), nullable=False)
-    created_at: Any = Column(DateTime, nullable=False, default=datetime.utcnow)
+    created_at: Any = Column(DateTime, nullable=False, default=_utc_now)
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize the exclusion record."""

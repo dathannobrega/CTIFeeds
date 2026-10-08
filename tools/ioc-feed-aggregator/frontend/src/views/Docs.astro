@@ -1,0 +1,582 @@
+---
+import Layout from '../layouts/Layout.astro';
+import PageHead from '../components/PageHead.astro';
+import CodeBlock from '../components/CodeBlock.astro';
+import { routePath, type Lang } from '../i18n/routes.ts';
+import { t } from '../i18n/ui.ts';
+import { rich } from '../lib/rich.ts';
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+const site = String(Astro.site ?? 'https://cti.segark.com').replace(/\/$/, '');
+const copy = t(lang, 'action.copy');
+const pt = lang === 'pt';
+
+interface Param {
+  name: string;
+  where: string;
+  text: string;
+}
+
+interface Endpoint {
+  id: string;
+  method: 'GET' | 'POST' | 'DELETE';
+  path: string;
+  auth?: boolean;
+  summary: string;
+  params?: Param[];
+  request: string;
+  response?: string;
+}
+
+const C = pt
+  ? {
+      title: 'API e documentação: feeds, consulta e estatísticas',
+      description:
+        'Referência da API pública de feeds de IoC: arquivos de texto, estatísticas, estado das fontes, consulta de indicadores em lote e lista de exclusão. JSON, sem chave de API.',
+      kicker: 'API',
+      h1: 'API e documentação',
+      lede: 'Tudo o que este site mostra vem de uma API JSON pública. Use-a para automatizar consultas e monitorar os feeds.',
+      toc: 'Nesta página',
+      basics: 'Convenções',
+      basicsList: [
+        'Base: `' + site + '`. Respostas em JSON (UTF-8), exceto os arquivos de feed, que são `text/plain`.',
+        'Datas em ISO 8601, UTC, com sufixo `Z`.',
+        'Erros retornam o status HTTP adequado e um corpo `{"message": "..."}`.',
+        'Sem chave de API para leitura. Os arquivos de feed têm CORS liberado (`Access-Control-Allow-Origin: *`).',
+        'Limite de requisições por IP na API; respostas acima do limite recebem **429**. Os arquivos de feed não entram nesse limite.',
+      ],
+      auth: 'Autenticação',
+      authText:
+        'Somente a lista de exclusão exige autenticação, quando o servidor define `ADMIN_TOKEN`. Envie o cabeçalho `Authorization: Bearer <token>`. O campo `auth_required` de `/api/v1/meta` diz se o token é exigido.',
+      params: 'Parâmetros',
+      example: 'Exemplo',
+      response: 'Resposta',
+      protected: 'requer token',
+      groups: { files: 'Arquivos', read: 'Leitura', lookup: 'Consulta', admin: 'Lista de exclusão' },
+    }
+  : {
+      title: 'API and documentation: feeds, lookup and statistics',
+      description:
+        'Reference for the public IoC feed API: text files, statistics, source status, bulk indicator lookup and the exclusion list. JSON, no API key.',
+      kicker: 'API',
+      h1: 'API and documentation',
+      lede: 'Everything this site shows comes from a public JSON API. Use it to automate lookups and monitor the feeds.',
+      toc: 'On this page',
+      basics: 'Conventions',
+      basicsList: [
+        'Base: `' + site + '`. Responses are JSON (UTF-8), except feed files, which are `text/plain`.',
+        'Timestamps are ISO 8601, UTC, with a `Z` suffix.',
+        'Errors return the appropriate HTTP status and a `{"message": "..."}` body.',
+        'No API key for reads. Feed files are CORS-enabled (`Access-Control-Allow-Origin: *`).',
+        'The API is rate limited per IP; requests over the limit get **429**. Feed files are not subject to that limit.',
+      ],
+      auth: 'Authentication',
+      authText:
+        'Only the exclusion list requires authentication, when the server sets `ADMIN_TOKEN`. Send the `Authorization: Bearer <token>` header. The `auth_required` field of `/api/v1/meta` tells whether a token is required.',
+      params: 'Parameters',
+      example: 'Example',
+      response: 'Response',
+      protected: 'token required',
+      groups: { files: 'Files', read: 'Read', lookup: 'Lookup', admin: 'Exclusion list' },
+    };
+
+const groups: { key: keyof typeof C.groups; endpoints: Endpoint[] }[] = [
+  {
+    key: 'files',
+    endpoints: [
+      {
+        id: 'feed-files',
+        method: 'GET',
+        path: '/feeds/{urls,domains,ipv4}.txt',
+        summary: pt
+          ? 'Feeds publicados, um indicador por linha. Suportam `ETag`/`If-None-Match` e `Last-Modified`/`If-Modified-Since` (resposta **304**).'
+          : 'Published feeds, one indicator per line. Support `ETag`/`If-None-Match` and `Last-Modified`/`If-Modified-Since` (**304** response).',
+        request: `curl -fsS ${site}/feeds/ipv4.txt | head -3`,
+        response: `198.51.100.7\n203.0.113.9\n203.0.113.42`,
+      },
+      {
+        id: 'checksums',
+        method: 'GET',
+        path: '/feeds/SHA256SUMS',
+        summary: pt
+          ? 'SHA-256 dos três arquivos no formato do `sha256sum -c`.'
+          : 'SHA-256 of the three files in `sha256sum -c` format.',
+        request: `curl -fsS ${site}/feeds/SHA256SUMS`,
+        response: `cf22f7aa…d518  urls.txt\n40ac0626…2494  domains.txt\ndb5f2bba…1ba7  ipv4.txt`,
+      },
+    ],
+  },
+  {
+    key: 'read',
+    endpoints: [
+      {
+        id: 'stats',
+        method: 'GET',
+        path: '/api/v1/stats',
+        summary: pt
+          ? 'Totais por tipo, metadados de cada arquivo, contagem da lista de exclusão e saúde das fontes. Cache de 30 s.'
+          : 'Totals per type, metadata for each file, exclusion list counts and source health. Cached for 30 s.',
+        request: `curl -fsS ${site}/api/v1/stats`,
+        response: `{
+  "collected_at": "2026-10-08T14:02:36Z",
+  "published_at": "2026-10-08T14:02:37Z",
+  "refresh_interval_seconds": 3600,
+  "next_collection_at": "2026-10-08T15:02:36Z",
+  "totals": { "url": 48211, "domain": 21843, "ipv4": 9301, "all": 79355 },
+  "feeds": {
+    "ipv4": { "file": "ipv4.txt", "path": "/feeds/ipv4.txt", "count": 9301,
+              "raw_count": 9301, "excluded": 0, "bytes": 132873, "sha256": "db5f…" }
+  },
+  "exclusions": { "url": 0, "domain": 2, "ipv4": 1 },
+  "sources": { "configured": 5, "ok": 4, "stale": 1, "failed": 1 }
+}`,
+      },
+      {
+        id: 'sources',
+        method: 'GET',
+        path: '/api/v1/sources',
+        summary: pt
+          ? 'Resultado da última coleta de cada fonte. URLs sem query string nem credenciais.'
+          : 'Outcome of the latest collection for each source. URLs without query string or credentials.',
+        request: `curl -fsS ${site}/api/v1/sources`,
+        response: `{
+  "collected_at": "2026-10-08T14:02:36Z",
+  "sources": [
+    { "indicator_type": "ipv4", "url": "https://feeds.example/ipv4.txt",
+      "host": "feeds.example", "ok": true, "stale": false, "count": 9301,
+      "invalid": 2, "duration_ms": 412, "error": null,
+      "fetched_at": "2026-10-08T14:02:36Z" }
+  ]
+}`,
+      },
+      {
+        id: 'sample',
+        method: 'GET',
+        path: '/api/v1/sample',
+        summary: pt ? 'Amostra aleatória dos feeds (usada na fita da página inicial).' : 'Random sample of the feeds (used by the home page tape).',
+        params: [
+          { name: 'limit', where: 'query', text: pt ? '1 a 120, padrão 30.' : '1 to 120, default 30.' },
+          { name: 'type', where: 'query', text: pt ? 'Opcional: `url`, `domain` ou `ipv4`.' : 'Optional: `url`, `domain` or `ipv4`.' },
+        ],
+        request: `curl -fsS "${site}/api/v1/sample?limit=3&type=domain"`,
+        response: `{ "items": [ { "type": "domain", "value": "update-billing.example" } ] }`,
+      },
+      {
+        id: 'meta',
+        method: 'GET',
+        path: '/api/v1/meta',
+        summary: pt ? 'Versão da API, tipos suportados, limites e se a lista de exclusão exige token.' : 'API version, supported types, limits and whether the exclusion list needs a token.',
+        request: `curl -fsS ${site}/api/v1/meta`,
+        response: `{ "version": "2.0.0", "auth_required": true, "indicator_types": ["url", "domain", "ipv4"],
+  "lookup_batch_limit": 500, "refresh_interval_seconds": 3600 }`,
+      },
+      {
+        id: 'health',
+        method: 'GET',
+        path: '/healthz',
+        summary: pt
+          ? 'Saúde do serviço: **200** com banco acessível, **503** caso contrário. Para monitoramento e balanceadores.'
+          : 'Service health: **200** when the database is reachable, **503** otherwise. For monitors and load balancers.',
+        request: `curl -fsS ${site}/healthz`,
+        response: `{ "status": "ok", "database": "ok", "feeds": "ok" }`,
+      },
+    ],
+  },
+  {
+    key: 'lookup',
+    endpoints: [
+      {
+        id: 'lookup-get',
+        method: 'GET',
+        path: '/api/v1/lookup',
+        summary: pt
+          ? 'Consulta um indicador. Aceita valores defanged e detecta o tipo sozinho.'
+          : 'Looks up one indicator. Accepts defanged values and detects the type by itself.',
+        params: [
+          { name: 'value', where: 'query', text: pt ? 'IP, domínio ou URL (máx. 2048 caracteres).' : 'IP, domain or URL (max. 2048 characters).' },
+          { name: 'type', where: 'query', text: pt ? 'Opcional: força `url`, `domain` ou `ipv4`.' : 'Optional: forces `url`, `domain` or `ipv4`.' },
+        ],
+        request: `curl -fsS "${site}/api/v1/lookup?value=cdn.evil%5B.%5Dexample"`,
+        response: `{
+  "query": "cdn.evil[.]example",
+  "type": "domain",
+  "value": "cdn.evil.example",
+  "valid": true,
+  "listed": false,
+  "excluded": false,
+  "excluded_at": null,
+  "related": [ { "type": "domain", "value": "evil.example", "relation": "parent_domain" } ],
+  "feeds_published_at": "2026-10-08T14:02:37Z"
+}`,
+      },
+      {
+        id: 'lookup-post',
+        method: 'POST',
+        path: '/api/v1/lookup',
+        summary: pt
+          ? 'Consulta em lote, até 500 valores por requisição. Valores acima do limite retornam **413**.'
+          : 'Bulk lookup, up to 500 values per request. Going over the limit returns **413**.',
+        params: [{ name: 'values', where: 'body', text: pt ? 'Lista de strings.' : 'List of strings.' }],
+        request: `curl -fsS -X POST ${site}/api/v1/lookup \\
+  -H 'Content-Type: application/json' \\
+  -d '{"values": ["203.0.113.9", "192.0.2.1", "hxxp://evil[.]example/a"]}'`,
+        response: `{
+  "summary": { "total": 3, "listed": 1, "related": 1, "excluded": 0, "invalid": 0 },
+  "results": [ { "query": "203.0.113.9", "type": "ipv4", "listed": true, "…": "…" } ],
+  "feeds_published_at": "2026-10-08T14:02:37Z"
+}`,
+      },
+    ],
+  },
+  {
+    key: 'admin',
+    endpoints: [
+      {
+        id: 'exclusions-list',
+        method: 'GET',
+        path: '/api/v1/exclusions',
+        auth: true,
+        summary: pt ? 'Lista a lista de exclusão, mais recentes primeiro.' : 'Lists the exclusion list, newest first.',
+        request: `curl -fsS ${site}/api/v1/exclusions -H "Authorization: Bearer $TOKEN"`,
+        response: `[ { "id": 7, "indicator_type": "domain", "value": "cdn.partner.example",
+    "created_at": "2026-10-08T13:58:02" } ]`,
+      },
+      {
+        id: 'exclusions-add',
+        method: 'POST',
+        path: '/api/v1/exclusions',
+        auth: true,
+        summary: pt
+          ? 'Adiciona um indicador à exclusão e republica os feeds na hora, sem baixar as fontes de novo. Duplicado retorna **400**.'
+          : 'Adds an indicator to the exclusion list and republishes the feeds immediately, without re-downloading sources. Duplicates return **400**.',
+        params: [
+          { name: 'indicator_type', where: 'body', text: pt ? '`url`, `domain` ou `ipv4`.' : '`url`, `domain` or `ipv4`.' },
+          { name: 'value', where: 'body', text: pt ? 'Valor do indicador.' : 'Indicator value.' },
+        ],
+        request: `curl -fsS -X POST ${site}/api/v1/exclusions \\
+  -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \\
+  -d '{"indicator_type": "domain", "value": "cdn.partner.example"}'`,
+        response: `{ "id": 7, "indicator_type": "domain", "value": "cdn.partner.example", "created_at": "…" }`,
+      },
+      {
+        id: 'exclusions-delete',
+        method: 'DELETE',
+        path: '/api/v1/exclusions',
+        auth: true,
+        summary: pt
+          ? 'Remove da exclusão (o indicador volta aos feeds se ainda estiver nas fontes). Resposta **204**; **404** se não existir.'
+          : 'Removes from the exclusion list (the indicator returns to the feeds if sources still list it). **204** response; **404** if missing.',
+        params: [
+          { name: 'indicator_type', where: 'body', text: pt ? '`url`, `domain` ou `ipv4`.' : '`url`, `domain` or `ipv4`.' },
+          { name: 'value', where: 'body', text: pt ? 'Valor do indicador.' : 'Indicator value.' },
+        ],
+        request: `curl -fsS -X DELETE ${site}/api/v1/exclusions \\
+  -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \\
+  -d '{"indicator_type": "domain", "value": "cdn.partner.example"}'`,
+      },
+    ],
+  },
+];
+
+const legacy = pt
+  ? 'A rota antiga `/exclusions` continua funcionando, com o mesmo comportamento de `/api/v1/exclusions`.'
+  : 'The legacy `/exclusions` route keeps working, with the same behaviour as `/api/v1/exclusions`.';
+
+const jsonLd = [
+  {
+    '@type': 'TechArticle',
+    '@id': `${site}${routePath('docs', lang)}#article`,
+    headline: C.title,
+    description: C.description,
+    inLanguage: pt ? 'pt-BR' : 'en',
+    author: { '@id': `${site}/#organization` },
+    publisher: { '@id': `${site}/#organization` },
+    proficiencyLevel: 'Expert',
+  },
+];
+---
+
+<Layout
+  lang={lang}
+  title={C.title}
+  description={C.description}
+  path={routePath('docs', lang)}
+  alternates={{ pt: routePath('docs', 'pt'), en: routePath('docs', 'en') }}
+  active="docs"
+  breadcrumbs={[{ name: C.kicker, path: routePath('docs', lang) }]}
+  jsonLd={jsonLd}
+>
+  <PageHead kicker={C.kicker} title={C.h1} lede={C.lede} />
+
+  <div class="wrap docs">
+    <nav class="toc" aria-labelledby="toc-title">
+      <p class="kicker" id="toc-title">{C.toc}</p>
+      <ol>
+        <li><a href="#conventions">{C.basics}</a></li>
+        <li><a href="#auth">{C.auth}</a></li>
+        {
+          groups.map((group) => (
+            <li>
+              <span class="toc-group">{C.groups[group.key]}</span>
+              <ol>
+                {group.endpoints.map((endpoint) => (
+                  <li>
+                    <a href={`#${endpoint.id}`}>
+                      <span class:list={['m', endpoint.method.toLowerCase()]}>{endpoint.method}</span>
+                      <span class="p">{endpoint.path}</span>
+                    </a>
+                  </li>
+                ))}
+              </ol>
+            </li>
+          ))
+        }
+      </ol>
+    </nav>
+
+    <div class="content">
+      <section id="conventions" class="block" aria-labelledby="conventions-title">
+        <h2 id="conventions-title">{C.basics}</h2>
+        <ul class="prose bullets">
+          {C.basicsList.map((item) => <li set:html={rich(item)} />)}
+        </ul>
+      </section>
+
+      <section id="auth" class="block" aria-labelledby="auth-title">
+        <h2 id="auth-title">{C.auth}</h2>
+        <p set:html={rich(C.authText)} />
+      </section>
+
+      {
+        groups.map((group) => (
+          <section class="block" aria-labelledby={`group-${group.key}`}>
+            <h2 id={`group-${group.key}`}>{C.groups[group.key]}</h2>
+            {group.key === 'admin' && <p class="muted" set:html={rich(legacy)} />}
+            {group.endpoints.map((endpoint) => (
+              <article class="endpoint" id={endpoint.id} aria-labelledby={`${endpoint.id}-title`}>
+                <h3 id={`${endpoint.id}-title`} class="sig">
+                  <span class:list={['m', endpoint.method.toLowerCase()]}>{endpoint.method}</span>
+                  <code class="p">{endpoint.path}</code>
+                  {endpoint.auth && <span class="lock">{C.protected}</span>}
+                </h3>
+                <p set:html={rich(endpoint.summary)} />
+                {endpoint.params && (
+                  <div class="table-scroll params">
+                    <table class="data-table">
+                      <caption class="visually-hidden">{C.params}</caption>
+                      <tbody>
+                        {endpoint.params.map((param) => (
+                          <tr>
+                            <th scope="row">
+                              <code>{param.name}</code>
+                            </th>
+                            <td class="where">{param.where}</td>
+                            <td set:html={rich(param.text)} />
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+                <div class="pair">
+                  <CodeBlock label={C.example} code={endpoint.request} copyLabel={copy} lang="sh" />
+                  {endpoint.response && <CodeBlock label={C.response} code={endpoint.response} copyLabel={copy} lang="json" />}
+                </div>
+              </article>
+            ))}
+          </section>
+        ))
+      }
+    </div>
+  </div>
+</Layout>
+
+<style>
+  .docs {
+    display: grid;
+    grid-template-columns: minmax(0, 3fr) minmax(0, 9fr);
+    gap: clamp(2rem, 4vw, 4rem);
+    border-top: 1px solid var(--line);
+    padding-top: clamp(2rem, 4vw, 3rem);
+  }
+
+  .toc {
+    position: sticky;
+    top: 6.5rem;
+    align-self: start;
+    max-height: calc(100vh - 8rem);
+    overflow-y: auto;
+  }
+
+  .toc ol {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .toc > ol > li {
+    margin-top: 0.85rem;
+  }
+
+  .toc a {
+    display: flex;
+    gap: 0.5rem;
+    align-items: baseline;
+    padding: 0.2rem 0;
+    font-size: 0.875rem;
+    text-decoration: none;
+  }
+
+  .toc a:hover .p {
+    text-decoration: underline;
+    text-decoration-color: var(--signal);
+  }
+
+  .toc-group {
+    display: block;
+    margin-bottom: 0.35rem;
+    font-family: var(--font-mono);
+    font-stretch: 87.5%;
+    font-size: 0.625rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--fg-2);
+  }
+
+  .toc .p {
+    font-family: var(--font-mono);
+    font-stretch: 87.5%;
+    font-size: 0.75rem;
+    overflow-wrap: anywhere;
+  }
+
+  .m {
+    flex: none;
+    display: inline-block;
+    min-width: 3.6rem;
+    padding: 0.15em 0.35em;
+    font-family: var(--font-mono);
+    font-stretch: 87.5%;
+    font-size: 0.5625rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-align: center;
+    border: 1.5px solid var(--fg);
+  }
+
+  .m.get {
+    background: transparent;
+  }
+
+  .m.post {
+    background: var(--fg);
+    color: var(--bg);
+  }
+
+  .m.delete {
+    background: var(--signal);
+    border-color: var(--signal);
+    color: var(--on-signal);
+  }
+
+  .block + .block {
+    margin-top: clamp(3rem, 6vw, 4.5rem);
+  }
+
+  .block > h2 {
+    margin-bottom: 1.25rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 3px solid var(--fg);
+  }
+
+  .bullets li {
+    max-width: 75ch;
+  }
+
+  .endpoint {
+    padding: 1.75rem 0 2rem;
+    border-bottom: 1px solid var(--line-soft);
+    scroll-margin-top: 6rem;
+  }
+
+  .sig {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.85rem;
+    font-size: 1rem;
+    text-transform: none;
+  }
+
+  .sig .m {
+    font-size: 0.6875rem;
+  }
+
+  .sig .p {
+    padding: 0;
+    background: none;
+    border: 0;
+    font-size: clamp(1rem, 1.6vw, 1.25rem);
+    font-weight: 600;
+  }
+
+  .lock {
+    font-family: var(--font-mono);
+    font-stretch: 87.5%;
+    font-size: 0.625rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 0.25em 0.5em;
+    border: 1.5px dashed var(--signal);
+    color: var(--signal-ink);
+  }
+
+  .params {
+    margin: 1rem 0;
+  }
+
+  .params th {
+    width: 11rem;
+    text-transform: none;
+    letter-spacing: 0;
+    font-size: 0.75rem;
+    color: var(--fg);
+  }
+
+  .where {
+    width: 5rem;
+    color: var(--fg-2);
+  }
+
+  .pair {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+  }
+
+  @media (max-width: 1100px) {
+    .pair {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+
+  @media (max-width: 860px) {
+    .docs {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .toc {
+      position: static;
+      max-height: none;
+      padding-bottom: 1.5rem;
+      border-bottom: 1px solid var(--line-soft);
+    }
+  }
+</style>
