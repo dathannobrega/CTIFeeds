@@ -1,5 +1,5 @@
 # Frontend do serviço de feeds: build estático com Astro, servido por nginx sem root.
-FROM node:22-alpine AS build
+FROM node:26-alpine AS build
 
 WORKDIR /app
 ENV ASTRO_TELEMETRY_DISABLED=1
