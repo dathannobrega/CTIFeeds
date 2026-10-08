@@ -1,0 +1,162 @@
+---
+/** Fita de teletipo com uma amostra aleatória dos feeds (sempre "defanged"). Decorativa. */
+import type { Lang } from '../i18n/routes.ts';
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+const label = lang === 'pt' ? 'Amostra ao vivo' : 'Live sample';
+const idle = lang === 'pt' ? 'aguardando a primeira coleta' : 'waiting for the first collection';
+---
+
+<div class="tape" data-tape data-idle={idle} aria-hidden="true">
+  <span class="label">{label}</span>
+  <div class="viewport">
+    <div class="track" data-tape-track>
+      <span class="item idle">{idle}</span>
+    </div>
+  </div>
+</div>
+
+<script>
+  import { defang, getJSON, reducedMotion } from '../scripts/fmt.ts';
+
+  interface Sample {
+    items: { type: 'url' | 'domain' | 'ipv4'; value: string }[];
+  }
+
+  const LABELS = { url: 'URL', domain: 'DOM', ipv4: 'IPv4' } as const;
+
+  async function fill(tape: HTMLElement) {
+    const track = tape.querySelector<HTMLElement>('[data-tape-track]');
+    if (!track) return;
+    let sample: Sample;
+    try {
+      sample = await getJSON<Sample>('/api/v1/sample?limit=48');
+    } catch {
+      return;
+    }
+    if (!sample.items.length) return;
+
+    const build = () => {
+      const fragment = document.createDocumentFragment();
+      for (const item of sample.items) {
+        const node = document.createElement('span');
+        node.className = 'item';
+        const tag = document.createElement('span');
+        tag.className = `tag tag--${item.type}`;
+        tag.textContent = LABELS[item.type];
+        const value = document.createElement('span');
+        value.className = 'value';
+        value.textContent = defang(item.value.length > 72 ? `${item.value.slice(0, 70)}…` : item.value, item.type);
+        node.append(tag, value);
+        fragment.append(node);
+      }
+      return fragment;
+    };
+
+    track.replaceChildren(build());
+    if (reducedMotion()) return;
+    // Conteúdo duplicado para o laço contínuo; a velocidade é constante (~60 px/s).
+    track.append(build());
+    requestAnimationFrame(() => {
+      const distance = track.scrollWidth / 2;
+      track.style.setProperty('--tape-duration', `${Math.max(30, distance / 60)}s`);
+      track.classList.add('is-running');
+    });
+  }
+
+  for (const tape of document.querySelectorAll<HTMLElement>('[data-tape]')) void fill(tape);
+</script>
+
+<style>
+  .tape {
+    display: flex;
+    align-items: stretch;
+    background: var(--inverse-bg);
+    color: var(--inverse-fg);
+    border-block: 1px solid var(--line);
+    font-family: var(--font-mono);
+    font-stretch: 87.5%;
+    font-size: 0.75rem;
+    overflow: hidden;
+  }
+
+  .label {
+    flex: none;
+    display: flex;
+    align-items: center;
+    padding: 0 1rem;
+    background: var(--signal);
+    color: var(--on-signal);
+    font-size: 0.625rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .viewport {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    mask-image: linear-gradient(90deg, transparent, #000 4%, #000 96%, transparent);
+  }
+
+  .track {
+    display: flex;
+    width: max-content;
+  }
+
+  .track:global(.is-running) {
+    animation: tape var(--tape-duration, 90s) linear infinite;
+  }
+
+  .tape:hover .track {
+    animation-play-state: paused;
+  }
+
+  @keyframes tape {
+    to {
+      transform: translateX(-50%);
+    }
+  }
+
+  .track :global(.item) {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.85rem 1.5rem 0.85rem 0;
+    white-space: nowrap;
+  }
+
+  .track :global(.item)::after {
+    content: '/';
+    margin-left: 1.5rem;
+    color: var(--inverse-fg-2);
+  }
+
+  .track :global(.tag--domain) {
+    background: var(--inverse-fg);
+    border-color: var(--inverse-fg);
+    color: var(--inverse-bg);
+  }
+
+  .track :global(.tag--ipv4) {
+    border-color: var(--inverse-fg);
+    color: var(--inverse-fg);
+  }
+
+  .idle {
+    padding-left: 1rem !important;
+    color: var(--inverse-fg-2);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .idle::after {
+    display: none;
+  }
+</style>

@@ -1,0 +1,207 @@
+---
+import Layout from '../layouts/Layout.astro';
+import PageHead from '../components/PageHead.astro';
+import Section from '../components/Section.astro';
+import TypeTag from '../components/TypeTag.astro';
+import { INTEGRATIONS } from '../data/integrations.ts';
+import { integrationPath, routePath, type Lang } from '../i18n/routes.ts';
+import { plain } from '../lib/rich.ts';
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+const site = String(Astro.site ?? 'https://cti.segark.com').replace(/\/$/, '');
+
+const C = {
+  pt: {
+    title: 'Integrações: feeds de IoC no FortiGate, Palo Alto, pfSense e mais',
+    description:
+      'Guias para usar os feeds gratuitos de IoC no FortiGate, Palo Alto (EDL), pfSense (pfBlockerNG), OPNsense, Linux com nftables, Pi-hole e AdGuard Home.',
+    kicker: 'Integrações',
+    h1: 'Integrações',
+    lede: 'Os feeds são texto puro, o formato que quase todo equipamento de segurança já sabe ler. Escolha o seu.',
+    read: 'Ler o guia',
+    otherLabel: 'Outros',
+    otherTitle: 'Não achou o seu?',
+    other:
+      'Qualquer ferramenta que importe uma lista remota com um item por linha funciona: SIEMs com lookup externo, proxies, WAFs, scripts de SOAR. Use as URLs da página de feeds e um intervalo de uma hora.',
+    feeds: 'Ver URLs dos feeds',
+    listName: 'Guias de integração',
+  },
+  en: {
+    title: 'Integrations: IoC feeds on FortiGate, Palo Alto, pfSense and more',
+    description:
+      'Guides to use the free IoC feeds on FortiGate, Palo Alto (EDL), pfSense (pfBlockerNG), OPNsense, Linux with nftables, Pi-hole and AdGuard Home.',
+    kicker: 'Integrations',
+    h1: 'Integrations',
+    lede: 'The feeds are plain text, the format almost every security device already reads. Pick yours.',
+    read: 'Read the guide',
+    otherLabel: 'Others',
+    otherTitle: 'Yours is not here?',
+    other:
+      'Any tool that imports a remote one-item-per-line list works: SIEMs with external lookups, proxies, WAFs, SOAR scripts. Use the URLs from the feeds page and a one-hour interval.',
+    feeds: 'See feed URLs',
+    listName: 'Integration guides',
+  },
+}[lang];
+
+const jsonLd = [
+  {
+    '@type': 'ItemList',
+    name: C.listName,
+    itemListElement: INTEGRATIONS.map((item, index) => ({
+      '@type': 'ListItem',
+      position: index + 1,
+      url: `${site}${integrationPath(item.slug, lang)}`,
+      name: plain(item.title[lang]),
+    })),
+  },
+];
+---
+
+<Layout
+  lang={lang}
+  title={C.title}
+  description={C.description}
+  path={routePath('integrations', lang)}
+  alternates={{ pt: routePath('integrations', 'pt'), en: routePath('integrations', 'en') }}
+  active="integrations"
+  breadcrumbs={[{ name: C.kicker, path: routePath('integrations', lang) }]}
+  jsonLd={jsonLd}
+>
+  <PageHead kicker={C.kicker} title={C.h1} lede={C.lede} />
+
+  <section class="wrap" aria-label={C.h1}>
+    <ol class="guides">
+      {
+        INTEGRATIONS.map((item, index) => (
+          <li>
+            <a href={integrationPath(item.slug, lang)}>
+              <span class="n mono">{String(index + 1).padStart(2, '0')}</span>
+              <span class="main">
+                <span class="name">{item.name}</span>
+                <span class="vendor mono">
+                  {item.vendor} · {item.mechanism[lang]}
+                </span>
+                <span class="desc">{plain(item.description[lang])}</span>
+              </span>
+              <span class="tags">
+                {item.feeds.map((type) => (
+                  <TypeTag type={type} />
+                ))}
+              </span>
+              <span class="go mono">
+                {C.read} <span aria-hidden="true">→</span>
+              </span>
+            </a>
+          </li>
+        ))
+      }
+    </ol>
+  </section>
+
+  <Section id="other" num="—" label={C.otherLabel} title={C.otherTitle} lede={C.other}>
+    <a class="btn" href={routePath('feeds', lang)}>{C.feeds}<span class="arrow" aria-hidden="true">→</span></a>
+  </Section>
+</Layout>
+
+<style>
+  .guides {
+    margin: 0 0 clamp(3rem, 6vw, 5rem);
+    padding: 0;
+    list-style: none;
+    border-top: 3px solid var(--fg);
+  }
+
+  .guides a {
+    display: grid;
+    grid-template-columns: 3.5rem minmax(0, 1fr) auto auto;
+    gap: 1.5rem;
+    align-items: center;
+    padding: 1.6rem 0.75rem;
+    border-bottom: 1px solid var(--line);
+    text-decoration: none;
+    transition:
+      background-color 0.15s var(--ease),
+      color 0.15s var(--ease);
+  }
+
+  .guides a:hover,
+  .guides a:focus-visible {
+    background: var(--fg);
+    color: var(--bg);
+    --fg-2: var(--bg-3);
+  }
+
+  .guides a:hover :global(.tag--domain),
+  .guides a:focus-visible :global(.tag--domain) {
+    background: var(--bg);
+    color: var(--fg);
+    border-color: var(--bg);
+  }
+
+  .guides a:hover :global(.tag--ipv4),
+  .guides a:focus-visible :global(.tag--ipv4) {
+    border-color: var(--bg);
+    color: var(--bg);
+  }
+
+  .n {
+    align-self: start;
+    padding-top: 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--signal-ink);
+  }
+
+  .main {
+    display: grid;
+    gap: 0.4rem;
+  }
+
+  .name {
+    font-size: clamp(1.75rem, 3.6vw, 3rem);
+    font-weight: 800;
+    font-stretch: 66%;
+    line-height: 0.95;
+    text-transform: uppercase;
+  }
+
+  .vendor {
+    font-size: 0.6875rem;
+    letter-spacing: 0.04em;
+    color: var(--fg-2);
+  }
+
+  .desc {
+    max-width: 70ch;
+    font-size: 0.9375rem;
+    color: var(--fg-2);
+  }
+
+  .tags {
+    display: inline-flex;
+    gap: 0.3rem;
+  }
+
+  .go {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  @media (max-width: 860px) {
+    .guides a {
+      grid-template-columns: 2.5rem minmax(0, 1fr);
+    }
+
+    .tags,
+    .go {
+      grid-column: 2;
+    }
+  }
+</style>

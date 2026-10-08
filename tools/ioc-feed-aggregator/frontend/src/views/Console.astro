@@ -1,0 +1,258 @@
+---
+import Layout from '../layouts/Layout.astro';
+import PageHead from '../components/PageHead.astro';
+import { routePath, type Lang } from '../i18n/routes.ts';
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+
+const C = {
+  pt: {
+    title: 'Console da lista de exclusão',
+    description: 'Gerencie a lista de exclusão de falsos positivos dos feeds de IoC.',
+    kicker: 'Console',
+    h1: 'Lista de exclusão',
+    lede: 'Indicadores aqui saem de todos os feeds na hora. Use para falsos positivos revisados.',
+    open: 'A API aceita alterações sem autenticação. Defina ADMIN_TOKEN no servidor antes de expor este serviço.',
+    tokenLabel: 'Token de administração',
+    login: 'Entrar',
+    logout: 'Sair',
+    addTitle: 'Excluir indicador',
+    type: 'Tipo',
+    value: 'Valor',
+    valuePlaceholder: 'ex.: cdn.parceiro.example',
+    add: 'Excluir dos feeds',
+    filter: 'Filtrar',
+    listTitle: 'Excluídos',
+    cols: ['Tipo', 'Valor', 'Incluído em', ''],
+    remove: 'Remover',
+    confirm: 'Confirmar?',
+    empty: 'Nenhum indicador excluído.',
+    noMatch: 'Nada corresponde ao filtro.',
+    added: 'Excluído. Os feeds já foram republicados.',
+    removed: 'Removido da exclusão. O indicador volta aos feeds se ainda estiver nas fontes.',
+    badToken: 'Token inválido.',
+    error: 'Falha ao falar com a API.',
+  },
+  en: {
+    title: 'Exclusion list console',
+    description: 'Manage the false-positive exclusion list of the IoC feeds.',
+    kicker: 'Console',
+    h1: 'Exclusion list',
+    lede: 'Indicators here leave every feed immediately. Use it for reviewed false positives.',
+    open: 'The API accepts changes without authentication. Set ADMIN_TOKEN on the server before exposing this service.',
+    tokenLabel: 'Admin token',
+    login: 'Sign in',
+    logout: 'Sign out',
+    addTitle: 'Exclude an indicator',
+    type: 'Type',
+    value: 'Value',
+    valuePlaceholder: 'e.g. cdn.partner.example',
+    add: 'Exclude from feeds',
+    filter: 'Filter',
+    listTitle: 'Excluded',
+    cols: ['Type', 'Value', 'Added', ''],
+    remove: 'Remove',
+    confirm: 'Confirm?',
+    empty: 'No excluded indicators.',
+    noMatch: 'Nothing matches the filter.',
+    added: 'Excluded. The feeds have been republished.',
+    removed: 'Removed from the exclusion list. The indicator returns to the feeds if sources still list it.',
+    badToken: 'Invalid token.',
+    error: 'Could not reach the API.',
+  },
+}[lang];
+
+const strings = JSON.stringify(C).replaceAll('<', '\\u003c');
+---
+
+<Layout
+  lang={lang}
+  title={C.title}
+  description={C.description}
+  path={routePath('console', lang)}
+  alternates={{ pt: routePath('console', 'pt'), en: routePath('console', 'en') }}
+  noindex
+>
+  <PageHead kicker={C.kicker} title={C.h1} lede={C.lede} />
+
+  <section class="wrap console" data-console aria-label={C.h1}>
+    <p class="banner mono" data-open-banner hidden>{C.open}</p>
+
+    <form class="login" data-login hidden>
+      <div class="field">
+        <label for="console-token">{C.tokenLabel}</label>
+        <input id="console-token" class="input" name="token" type="password" autocomplete="current-password" required />
+      </div>
+      <button class="btn btn--solid" type="submit">{C.login}</button>
+    </form>
+
+    <div class="panel" data-panel hidden>
+      <form class="add" data-add>
+        <h2 class="kicker">{C.addTitle}</h2>
+        <fieldset class="types">
+          <legend class="visually-hidden">{C.type}</legend>
+          <label><input type="radio" name="indicator_type" value="domain" checked /><span>{lang === 'pt' ? 'Domínio' : 'Domain'}</span></label>
+          <label><input type="radio" name="indicator_type" value="url" /><span>URL</span></label>
+          <label><input type="radio" name="indicator_type" value="ipv4" /><span>IPv4</span></label>
+        </fieldset>
+        <div class="add-row">
+          <label class="visually-hidden" for="console-value">{C.value}</label>
+          <input id="console-value" class="input" name="value" type="text" required maxlength="512" autocomplete="off" spellcheck="false" placeholder={C.valuePlaceholder} />
+          <button class="btn btn--signal" type="submit">{C.add}</button>
+        </div>
+      </form>
+
+      <p class="flash mono" data-flash role="status"></p>
+
+      <div class="list-head">
+        <h2 class="kicker">{C.listTitle} · <span data-count>0</span></h2>
+        <div class="list-tools">
+          <label class="visually-hidden" for="console-filter">{C.filter}</label>
+          <input id="console-filter" class="input filter" type="search" placeholder={C.filter} data-filter />
+          <button class="btn btn--small" type="button" data-logout hidden>{C.logout}</button>
+        </div>
+      </div>
+      <div class="table-scroll" data-list></div>
+    </div>
+  </section>
+
+  <script type="application/json" id="console-strings" set:html={strings} />
+</Layout>
+
+<script>
+  import { runConsole } from '../scripts/console.ts';
+
+  runConsole();
+</script>
+
+<style>
+  .console {
+    display: grid;
+    gap: 1.5rem;
+  }
+
+  .banner {
+    margin: 0;
+    max-width: none;
+    padding: 0.9rem 1.1rem;
+    border: 1.5px solid var(--signal);
+    background-image: repeating-linear-gradient(-45deg, transparent 0 8px, var(--line-soft) 8px 10px);
+    font-size: 0.75rem;
+  }
+
+  .login {
+    display: grid;
+    grid-template-columns: minmax(0, 28rem) auto;
+    gap: 0.75rem;
+    align-items: end;
+  }
+
+  .panel {
+    display: grid;
+    gap: 1.5rem;
+  }
+
+  .add {
+    padding: 1.25rem;
+    border: 1.5px solid var(--fg);
+  }
+
+  .add h2 {
+    margin-bottom: 1rem;
+  }
+
+  .types {
+    display: inline-flex;
+    flex-wrap: wrap;
+    margin: 0 0 0.75rem;
+    padding: 0;
+    border: 1.5px solid var(--fg);
+  }
+
+  .types label {
+    position: relative;
+    cursor: pointer;
+  }
+
+  .types input {
+    position: absolute;
+    opacity: 0;
+  }
+
+  .types span {
+    display: block;
+    padding: 0.55rem 0.9rem;
+    font-family: var(--font-mono);
+    font-stretch: 87.5%;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .types input:checked + span {
+    background: var(--fg);
+    color: var(--bg);
+  }
+
+  .types input:focus-visible + span {
+    outline: 2px solid var(--signal);
+    outline-offset: 2px;
+  }
+
+  .add-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.75rem;
+  }
+
+  .flash {
+    min-height: 1.25rem;
+    margin: 0;
+    font-size: 0.75rem;
+  }
+
+  .flash:global(.is-error) {
+    color: var(--signal-ink);
+  }
+
+  .list-head {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: end;
+    gap: 1rem;
+  }
+
+  .list-tools {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .filter {
+    min-height: 2.25rem;
+    width: 16rem;
+    font-size: 0.8125rem;
+  }
+
+  .console :global(.remove.is-armed) {
+    background: var(--signal);
+    border-color: var(--signal);
+    color: var(--on-signal);
+  }
+
+  @media (max-width: 640px) {
+    .login,
+    .add-row {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .filter {
+      width: 100%;
+    }
+  }
+</style>

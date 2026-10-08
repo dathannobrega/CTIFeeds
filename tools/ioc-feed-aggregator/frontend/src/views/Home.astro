@@ -1,0 +1,801 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Section from '../components/Section.astro';
+import FeedStub from '../components/FeedStub.astro';
+import Tape from '../components/Tape.astro';
+import TypeTag from '../components/TypeTag.astro';
+import CodeBlock from '../components/CodeBlock.astro';
+import { INTEGRATIONS } from '../data/integrations.ts';
+import { faq } from '../data/faq.ts';
+import { integrationPath, routePath, type Lang } from '../i18n/routes.ts';
+import { t } from '../i18n/ui.ts';
+import { INDICATOR_TYPES } from '../site.ts';
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+const site = String(Astro.site ?? 'https://cti.segark.com').replace(/\/$/, '');
+
+const C = {
+  pt: {
+    title: 'Feeds de IoC gratuitos — URLs, domínios e IPs maliciosos | Segark CTI',
+    description:
+      'Blocklists gratuitas de URLs, domínios e endereços IPv4 maliciosos, atualizadas a cada hora, em texto puro para FortiGate, Palo Alto, pfSense, OPNsense, nftables e Pi-hole. Sem cadastro.',
+    kicker: 'Boletim aberto de indicadores de comprometimento',
+    h1: 'Feeds gratuitos de IoC para bloquear URLs, domínios e IPs maliciosos',
+    lede: 'Coletamos listas públicas de ameaças a cada hora, normalizamos, validamos, removemos duplicatas e falsos positivos conhecidos, e publicamos três arquivos de texto puro que o seu firewall consome direto.',
+    counter: 'indicadores ativos agora',
+    collected: 'última coleta',
+    sources: 'fontes respondendo',
+    next: 'próxima coleta',
+    ctaFeeds: 'Baixar os feeds',
+    ctaLookup: 'Consultar um indicador',
+    share: 'Composição do feed',
+    feedsLabel: 'Feeds',
+    feedsTitle: 'Três arquivos. Um indicador por linha.',
+    feedsLede:
+      'Texto puro em UTF-8, ordenado e sem duplicatas. Sem cadastro e sem chave de API, com CORS liberado e checksums SHA-256 a cada publicação.',
+    stubs: {
+      url: { title: 'URLs maliciosas', blurb: 'Endereços completos de phishing, distribuição de malware e C2, com esquema e caminho.' },
+      domain: { title: 'Domínios', blurb: 'Nomes de domínio em minúsculas, prontos para DNS sinkhole, DNS Filter e RPZ.' },
+      ipv4: { title: 'Endereços IPv4', blurb: 'IPs em forma canônica para listas de bloqueio de firewall, ipset e nftables.' },
+    },
+    verify: 'Baixar e conferir a integridade',
+    pipeLabel: 'Método',
+    pipeTitle: 'Da fonte ao bloqueio em seis etapas',
+    pipeLede: 'Cada etapa existe para que o arquivo que chega no seu firewall seja confiável, estável e consistente.',
+    steps: [
+      ['Coleta', 'Cada fonte é baixada com timeout e limite de tamanho. Se uma cair, a última cópia boa continua valendo.'],
+      ['Normalização', 'Comentários e espaços saem; domínios ficam em minúsculas; IPs são reescritos na forma canônica.'],
+      ['Validação', 'Cada linha é validada pelo tipo: IPv4 real, URL com esquema e host, domínio sem espaços nem barras.'],
+      ['Deduplicação', 'Fontes se sobrepõem. Cada indicador aparece uma única vez, em ordem estável entre publicações.'],
+      ['Exclusões', 'Uma lista revisada por analistas retira falsos positivos conhecidos antes de qualquer publicação.'],
+      ['Publicação', 'Gravação atômica com checksums e metadados: o arquivo nunca é servido pela metade.'],
+    ],
+    lookupLabel: 'Consulta',
+    lookupTitle: 'Esse IP está na lista?',
+    lookupLede:
+      'Cole um IP, domínio ou URL, inclusive no formato defanged dos relatórios (hxxp, [.]). A resposta mostra se ele está publicado, se foi excluído e se um domínio pai ou host relacionado aparece nos feeds.',
+    lookupPlaceholder: 'ex.: hxxp://exemplo[.]com/login ou 203.0.113.7',
+    lookupButton: 'Consultar',
+    intLabel: 'Integrações',
+    intTitle: 'Funciona com o que você já tem',
+    intLede: 'Guias passo a passo para os equipamentos e resolvedores mais comuns. Cada um usa só recursos nativos.',
+    intAll: 'Todas as integrações',
+    faqLabel: 'Perguntas',
+    faqTitle: 'Perguntas frequentes',
+  },
+  en: {
+    title: 'Free IoC feeds — malicious URLs, domains and IPs | Segark CTI',
+    description:
+      'Free blocklists of malicious URLs, domains and IPv4 addresses, refreshed hourly, as plain text for FortiGate, Palo Alto, pfSense, OPNsense, nftables and Pi-hole. No sign-up.',
+    kicker: 'Open bulletin of indicators of compromise',
+    h1: 'Free IoC feeds to block malicious URLs, domains and IPs',
+    lede: 'We collect public threat lists every hour, normalise and validate them, remove duplicates and known false positives, and publish three plain-text files your firewall can consume as is.',
+    counter: 'indicators active right now',
+    collected: 'last collection',
+    sources: 'sources responding',
+    next: 'next collection',
+    ctaFeeds: 'Download the feeds',
+    ctaLookup: 'Look up an indicator',
+    share: 'Feed composition',
+    feedsLabel: 'Feeds',
+    feedsTitle: 'Three files. One indicator per line.',
+    feedsLede:
+      'Plain UTF-8 text, sorted and de-duplicated. No sign-up and no API key, CORS enabled and SHA-256 checksums on every publication.',
+    stubs: {
+      url: { title: 'Malicious URLs', blurb: 'Full phishing, malware distribution and C2 addresses, with scheme and path.' },
+      domain: { title: 'Domains', blurb: 'Lower-cased domain names, ready for DNS sinkholes, DNS Filter and RPZ.' },
+      ipv4: { title: 'IPv4 addresses', blurb: 'Canonical IPs for firewall blocklists, ipset and nftables.' },
+    },
+    verify: 'Download and verify integrity',
+    pipeLabel: 'Method',
+    pipeTitle: 'From source to block in six steps',
+    pipeLede: 'Every step exists so the file that reaches your firewall is trustworthy, stable and consistent.',
+    steps: [
+      ['Collection', 'Each source is fetched with a timeout and a size cap. If one goes down, its last good copy stays in use.'],
+      ['Normalisation', 'Comments and whitespace go; domains are lower-cased; IPs are rewritten in canonical form.'],
+      ['Validation', 'Every line is checked against its type: a real IPv4, a URL with scheme and host, a domain without spaces or slashes.'],
+      ['De-duplication', 'Sources overlap. Each indicator appears exactly once, in a stable order across publications.'],
+      ['Exclusions', 'An analyst-reviewed list removes known false positives before anything is published.'],
+      ['Publication', 'Atomic writes with checksums and metadata: a file is never served half-written.'],
+    ],
+    lookupLabel: 'Lookup',
+    lookupTitle: 'Is this IP on the list?',
+    lookupLede:
+      'Paste an IP, domain or URL, defanged report notation included (hxxp, [.]). The answer tells you whether it is published, whether it was excluded and whether a parent domain or related host shows up in the feeds.',
+    lookupPlaceholder: 'e.g. hxxp://example[.]com/login or 203.0.113.7',
+    lookupButton: 'Look up',
+    intLabel: 'Integrations',
+    intTitle: 'Works with what you already run',
+    intLede: 'Step-by-step guides for the most common firewalls and resolvers. Each one uses native features only.',
+    intAll: 'All integrations',
+    faqLabel: 'Questions',
+    faqTitle: 'Frequently asked questions',
+  },
+}[lang];
+
+const questions = faq(lang);
+const verifyCode = `curl -fsSO ${site}/feeds/ipv4.txt
+curl -fsS ${site}/feeds/SHA256SUMS | grep ipv4.txt | sha256sum -c -`;
+
+const jsonLd = [
+  {
+    '@type': 'FAQPage',
+    '@id': `${new URL(routePath('home', lang), site).href}#faq`,
+    mainEntity: questions.map((item) => ({
+      '@type': 'Question',
+      name: item.q,
+      acceptedAnswer: { '@type': 'Answer', text: item.a },
+    })),
+  },
+];
+---
+
+<Layout
+  lang={lang}
+  title={C.title}
+  description={C.description}
+  path={routePath('home', lang)}
+  alternates={{ pt: routePath('home', 'pt'), en: routePath('home', 'en') }}
+  jsonLd={jsonLd}
+>
+  <section class="hero" aria-labelledby="hero-title">
+    <div class="wrap">
+      <div class="hero-top">
+        <p class="kicker">{C.kicker}</p>
+        <p class="kicker edition" aria-hidden="true">
+          Nº <span data-stat="published_at" data-fmt="edition">—</span>
+        </p>
+      </div>
+
+      <div class="hero-head">
+        <h1 id="hero-title">{C.h1}</h1>
+        <div class="hero-side">
+          <p class="lede">{C.lede}</p>
+          <div class="ctas">
+            <a class="btn btn--signal" href="#feeds">{C.ctaFeeds}<span class="arrow" aria-hidden="true">↓</span></a>
+            <a class="btn" href={routePath('lookup', lang)}>{C.ctaLookup}<span class="arrow" aria-hidden="true">→</span></a>
+          </div>
+        </div>
+      </div>
+
+      <div class="counter">
+        <p class="big" aria-describedby="counter-label">
+          <span data-stat="totals.all" data-fmt="number" data-scramble>—</span>
+        </p>
+        <div class="counter-meta">
+          <p id="counter-label" class="counter-label">{C.counter}</p>
+          <dl class="facts mono">
+            <div>
+              <dt>{C.collected}</dt>
+              <dd><span data-stat="collected_at" data-fmt="relative" data-title="datetime">—</span></dd>
+            </div>
+            <div>
+              <dt>{C.sources}</dt>
+              <dd>
+                <span data-stat="sources.ok" data-fmt="number">—</span>/<span data-stat="sources.configured" data-fmt="number">—</span>
+              </dd>
+            </div>
+            <div>
+              <dt>{C.next}</dt>
+              <dd><span data-stat="next_collection_at" data-fmt="relative">—</span></dd>
+            </div>
+          </dl>
+        </div>
+      </div>
+
+      <figure class="composition">
+        <figcaption class="kicker">{C.share}</figcaption>
+        <div class="ruler" aria-hidden="true"><span>0</span><span>50</span><span>100%</span></div>
+        <div class="bar" aria-hidden="true">
+          <span class="seg seg-url" data-share="url"></span>
+          <span class="seg seg-domain" data-share="domain"></span>
+          <span class="seg seg-ipv4 hatch" data-share="ipv4"></span>
+        </div>
+        <ul class="legend">
+          {
+            INDICATOR_TYPES.map((type) => (
+              <li>
+                <TypeTag type={type} />
+                <span class="legend-name">{t(lang, `type.${type}.plural`)}</span>
+                <span class="legend-count mono" data-stat={`totals.${type}`} data-fmt="number">
+                  —
+                </span>
+              </li>
+            ))
+          }
+        </ul>
+      </figure>
+    </div>
+  </section>
+
+  <Tape lang={lang} />
+
+  <Section id="feeds" num="01" label={C.feedsLabel} title={C.feedsTitle} lede={C.feedsLede}>
+    <div class="stubs">
+      {
+        INDICATOR_TYPES.map((type, index) => (
+          <FeedStub lang={lang} type={type} index={index + 1} title={C.stubs[type].title} blurb={C.stubs[type].blurb} />
+        ))
+      }
+    </div>
+    <div class="verify">
+      <CodeBlock label={C.verify} code={verifyCode} copyLabel={t(lang, 'action.copy')} lang="sh" />
+    </div>
+  </Section>
+
+  <Section id="method" num="02" label={C.pipeLabel} title={C.pipeTitle} lede={C.pipeLede}>
+    <ol class="steps">
+      {
+        C.steps.map(([name, text], index) => (
+          <li>
+            <span class="step-num" aria-hidden="true">
+              {String(index + 1).padStart(2, '0')}
+            </span>
+            <h3>{name}</h3>
+            <p>{text}</p>
+          </li>
+        ))
+      }
+    </ol>
+  </Section>
+
+  <Section id="lookup" num="03" label={C.lookupLabel} title={C.lookupTitle} lede={C.lookupLede}>
+    <form class="prompt" action={routePath('lookup', lang)} method="get" role="search">
+      <label class="visually-hidden" for="home-q">{C.lookupTitle}</label>
+      <span class="caret" aria-hidden="true">›</span>
+      <input
+        id="home-q"
+        class="prompt-input"
+        name="q"
+        type="text"
+        inputmode="url"
+        autocomplete="off"
+        autocapitalize="off"
+        spellcheck="false"
+        placeholder={C.lookupPlaceholder}
+        required
+        maxlength="2048"
+      />
+      <button class="btn btn--solid" type="submit">{C.lookupButton}<span class="arrow" aria-hidden="true">↵</span></button>
+    </form>
+  </Section>
+
+  <Section id="integrations" num="04" label={C.intLabel} title={C.intTitle} lede={C.intLede}>
+    <ul class="index">
+      {
+        INTEGRATIONS.map((item) => (
+          <li>
+            <a href={integrationPath(item.slug, lang)}>
+              <span class="index-name">{item.name}</span>
+              <span class="leader" aria-hidden="true" />
+              <span class="index-mech">{item.mechanism[lang]}</span>
+              <span class="index-tags">
+                {item.feeds.map((type) => (
+                  <TypeTag type={type} />
+                ))}
+              </span>
+              <span class="index-arrow" aria-hidden="true">
+                →
+              </span>
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+    <p class="more">
+      <a class="btn" href={routePath('integrations', lang)}>{C.intAll}<span class="arrow" aria-hidden="true">→</span></a>
+    </p>
+  </Section>
+
+  <Section id="faq" num="05" label={C.faqLabel} title={C.faqTitle}>
+    <div class="faq">
+      {
+        questions.map((item, index) => (
+          <details>
+            <summary>
+              <span class="q-num mono">Q.{String(index + 1).padStart(2, '0')}</span>
+              <span class="q-text">{item.q}</span>
+              <span class="q-sign" aria-hidden="true" />
+            </summary>
+            <p>{item.a}</p>
+          </details>
+        ))
+      }
+    </div>
+  </Section>
+</Layout>
+
+<style>
+  /* Hero ----------------------------------------------------------------------- */
+
+  .hero {
+    padding-top: clamp(2rem, 5vw, 3.5rem);
+    padding-bottom: clamp(2.5rem, 5vw, 4rem);
+    background-image: radial-gradient(var(--line-soft) 1px, transparent 1px);
+    background-size: 24px 24px;
+    background-position: -12px -12px;
+  }
+
+  .hero-top {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    padding-bottom: 0.9rem;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .hero-top p {
+    margin: 0;
+  }
+
+  .edition {
+    color: var(--fg);
+  }
+
+  .hero-head {
+    display: grid;
+    grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+    gap: 2rem clamp(2rem, 5vw, 5rem);
+    align-items: end;
+    padding-top: clamp(2rem, 5vw, 3.5rem);
+  }
+
+  h1 {
+    font-size: clamp(2.4rem, 5.4vw, 5rem);
+    font-stretch: 68%;
+    line-height: 0.92;
+  }
+
+  .hero-side .lede {
+    margin-bottom: 1.5rem;
+  }
+
+  .ctas {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  .counter {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 1rem clamp(1.5rem, 4vw, 3.5rem);
+    align-items: end;
+    margin-top: clamp(2.5rem, 6vw, 4.5rem);
+    padding-top: 1rem;
+    border-top: 3px solid var(--fg);
+  }
+
+  .big {
+    margin: 0;
+    max-width: none;
+    font-size: clamp(4.5rem, 19vw, 17rem);
+    font-weight: 800;
+    font-stretch: 62%;
+    line-height: 0.8;
+    letter-spacing: -0.035em;
+    white-space: nowrap;
+  }
+
+  .counter-meta {
+    padding-bottom: 0.35rem;
+  }
+
+  .counter-label {
+    margin: 0 0 1rem;
+    font-size: clamp(1.1rem, 1.8vw, 1.5rem);
+    font-weight: 700;
+    font-stretch: 80%;
+    line-height: 1.05;
+    text-transform: uppercase;
+    max-width: 14ch;
+  }
+
+  .facts {
+    margin: 0;
+    font-size: 0.75rem;
+  }
+
+  .facts div {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.45rem 0;
+    border-top: 1px solid var(--line-soft);
+  }
+
+  .facts dt {
+    color: var(--fg-2);
+    text-transform: uppercase;
+    font-size: 0.625rem;
+    letter-spacing: 0.06em;
+  }
+
+  .facts dd {
+    margin: 0;
+    font-weight: 600;
+  }
+
+  /* Composição: régua + barra proporcional por tipo. */
+  .composition {
+    margin: clamp(2rem, 4vw, 3rem) 0 0;
+  }
+
+  .ruler {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 0.6rem;
+    padding-bottom: 0.35rem;
+    font-family: var(--font-mono);
+    font-stretch: 87.5%;
+    font-size: 0.5625rem;
+    color: var(--fg-2);
+    background-image: repeating-linear-gradient(90deg, var(--fg) 0 1px, transparent 1px 10%);
+    background-size: 100% 5px;
+    background-repeat: no-repeat;
+    background-position: bottom left;
+  }
+
+  .bar {
+    display: flex;
+    height: clamp(2.5rem, 5vw, 3.75rem);
+    border: 1.5px solid var(--fg);
+    gap: 3px;
+    padding: 3px;
+  }
+
+  .seg {
+    flex: var(--share, 0.3333) 1 0;
+    min-width: 2px;
+    transition: flex-grow 0.8s var(--ease);
+  }
+
+  .seg-url {
+    background-color: var(--signal);
+  }
+
+  .seg-domain {
+    background-color: var(--fg);
+  }
+
+  .seg-ipv4 {
+    border: 1px solid var(--fg);
+  }
+
+  .legend {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .legend li {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.75rem 0.75rem 0 0;
+    min-width: 0;
+  }
+
+  .legend-name {
+    font-weight: 600;
+    font-stretch: 85%;
+    text-transform: uppercase;
+    font-size: 0.875rem;
+  }
+
+  .legend-count {
+    margin-left: auto;
+    font-size: 0.8125rem;
+    font-weight: 600;
+  }
+
+  /* Feeds ---------------------------------------------------------------------- */
+
+  .stubs {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: clamp(1rem, 2vw, 1.5rem);
+  }
+
+  .verify {
+    margin-top: clamp(1.5rem, 3vw, 2.5rem);
+    max-width: 52rem;
+  }
+
+  /* Método --------------------------------------------------------------------- */
+
+  .steps {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    border-top: 1.5px solid var(--fg);
+    border-left: 1px solid var(--line-soft);
+  }
+
+  .steps li {
+    position: relative;
+    padding: 1.5rem 1.5rem 2rem;
+    border-right: 1px solid var(--line-soft);
+    border-bottom: 1px solid var(--line-soft);
+    counter-increment: step;
+  }
+
+  .step-num {
+    display: block;
+    margin-bottom: 1.25rem;
+    font-size: clamp(3.5rem, 6vw, 5.5rem);
+    font-weight: 800;
+    font-stretch: 62%;
+    line-height: 0.8;
+    color: transparent;
+    -webkit-text-stroke: 1.5px var(--fg);
+    transition: color 0.25s var(--ease);
+  }
+
+  .steps li:hover .step-num {
+    color: var(--signal);
+    -webkit-text-stroke-color: var(--signal);
+  }
+
+  .steps h3 {
+    margin-bottom: 0.6rem;
+  }
+
+  .steps p {
+    margin: 0;
+    font-size: 0.9375rem;
+    color: var(--fg-2);
+  }
+
+  /* Consulta ------------------------------------------------------------------- */
+
+  .prompt {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.6rem 0.6rem 0.6rem 1.1rem;
+    border: 2px solid var(--fg);
+    background: var(--bg);
+  }
+
+  .prompt:focus-within {
+    border-color: var(--signal);
+    box-shadow: 0 0 0 1px var(--signal);
+  }
+
+  .caret {
+    font-family: var(--font-mono);
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--signal-ink);
+    line-height: 1;
+  }
+
+  .prompt-input {
+    width: 100%;
+    min-height: 3.25rem;
+    border: 0;
+    background: transparent;
+    font-family: var(--font-mono);
+    font-stretch: 87.5%;
+    font-size: clamp(0.9375rem, 1.6vw, 1.25rem);
+  }
+
+  .prompt-input:focus {
+    outline: none;
+  }
+
+  .prompt-input::placeholder {
+    color: var(--fg-3);
+  }
+
+  /* Integrações: índice com linhas pontilhadas. */
+  .index {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    border-top: 1.5px solid var(--fg);
+  }
+
+  .index a {
+    display: flex;
+    align-items: baseline;
+    gap: 0.9rem;
+    padding: 1.1rem 0.75rem;
+    border-bottom: 1px solid var(--line-soft);
+    text-decoration: none;
+    transition:
+      background-color 0.15s var(--ease),
+      color 0.15s var(--ease),
+      padding 0.25s var(--ease);
+  }
+
+  .index a:hover,
+  .index a:focus-visible {
+    background: var(--fg);
+    color: var(--bg);
+    padding-left: 1.25rem;
+  }
+
+  .index-name {
+    font-size: clamp(1.4rem, 2.6vw, 2rem);
+    font-weight: 800;
+    font-stretch: 70%;
+    line-height: 1;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .leader {
+    flex: 1;
+    min-width: 2rem;
+    border-bottom: 2px dotted currentColor;
+    opacity: 0.45;
+    transform: translateY(-0.3em);
+  }
+
+  .index-mech {
+    font-family: var(--font-mono);
+    font-stretch: 87.5%;
+    font-size: 0.75rem;
+  }
+
+  .index-tags {
+    display: inline-flex;
+    gap: 0.3rem;
+  }
+
+  .index a:hover .tag--domain,
+  .index a:focus-visible .tag--domain {
+    background: var(--bg);
+    color: var(--fg);
+    border-color: var(--bg);
+  }
+
+  .index a:hover .tag--ipv4,
+  .index a:focus-visible .tag--ipv4 {
+    border-color: var(--bg);
+    color: var(--bg);
+  }
+
+  .index-arrow {
+    font-size: 1.25rem;
+  }
+
+  .more {
+    margin-top: 1.75rem;
+  }
+
+  /* FAQ ------------------------------------------------------------------------ */
+
+  .faq {
+    border-top: 1.5px solid var(--fg);
+  }
+
+  details {
+    border-bottom: 1px solid var(--line-soft);
+  }
+
+  summary {
+    display: grid;
+    grid-template-columns: 4rem minmax(0, 1fr) auto;
+    align-items: baseline;
+    gap: 1rem;
+    padding: 1.2rem 0.25rem;
+    cursor: pointer;
+    list-style: none;
+  }
+
+  summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .q-num {
+    font-size: 0.6875rem;
+    color: var(--signal-ink);
+    font-weight: 700;
+  }
+
+  .q-text {
+    font-size: clamp(1.05rem, 1.6vw, 1.3rem);
+    font-weight: 700;
+    font-stretch: 85%;
+    line-height: 1.2;
+  }
+
+  .q-sign {
+    position: relative;
+    width: 0.9rem;
+    height: 0.9rem;
+  }
+
+  .q-sign::before,
+  .q-sign::after {
+    content: '';
+    position: absolute;
+    inset: 50% 0 auto;
+    height: 2px;
+    background: var(--fg);
+    transition: transform 0.25s var(--ease);
+  }
+
+  .q-sign::after {
+    transform: rotate(90deg);
+  }
+
+  details[open] .q-sign::after {
+    transform: rotate(0deg);
+  }
+
+  details p {
+    margin: 0 0 1.5rem 5rem;
+    color: var(--fg-2);
+  }
+
+  /* Responsivo ----------------------------------------------------------------- */
+
+  @media (max-width: 1100px) {
+    .stubs {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .steps {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 860px) {
+    .hero-head,
+    .counter {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .legend {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .legend li {
+      padding-right: 0;
+    }
+
+    .index-mech {
+      display: none;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .stubs,
+    .steps {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .prompt {
+      grid-template-columns: auto minmax(0, 1fr);
+    }
+
+    .prompt .btn {
+      grid-column: 1 / -1;
+    }
+
+    summary {
+      grid-template-columns: 3rem minmax(0, 1fr) auto;
+    }
+
+    details p {
+      margin-left: 0;
+    }
+
+    .index-tags {
+      display: none;
+    }
+  }
+</style>

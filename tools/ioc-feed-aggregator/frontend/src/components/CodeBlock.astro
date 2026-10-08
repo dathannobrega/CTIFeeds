@@ -1,0 +1,90 @@
+---
+/** Bloco de código com legenda e botão de copiar (sem destaque de sintaxe: texto limpo). */
+interface Props {
+  label: string;
+  code: string;
+  copyLabel: string;
+  lang?: string;
+}
+
+const { label, code, copyLabel, lang = 'text' } = Astro.props;
+
+// id estável a partir do conteúdo (o mesmo bloco gera o mesmo id em todo build).
+let hash = 0;
+for (const char of `${label}${code}`) hash = (Math.imul(31, hash) + char.charCodeAt(0)) | 0;
+const id = `code-${(hash >>> 0).toString(36)}`;
+---
+
+<figure class="code" data-lang={lang}>
+  <figcaption>
+    <span class="label">{label}</span>
+    <button class="copy" type="button" data-copy data-copy-target={id}>
+      <span data-copy-label>{copyLabel}</span>
+    </button>
+  </figcaption>
+  <pre tabindex="0"><code id={id}>{code}</code></pre>
+</figure>
+
+<style>
+  .code {
+    margin: 0;
+    border: 1.5px solid var(--fg);
+    background: var(--bg-2);
+    min-width: 0;
+  }
+
+  figcaption {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.35rem 0.35rem 0.35rem 0.85rem;
+    border-bottom: 1px solid var(--fg);
+    background: var(--bg);
+  }
+
+  .label {
+    font-family: var(--font-mono);
+    font-stretch: 87.5%;
+    font-size: 0.6875rem;
+    letter-spacing: 0.04em;
+    color: var(--fg-2);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .copy {
+    flex: none;
+    min-height: 1.9rem;
+    padding: 0 0.7rem;
+    border: 1px solid var(--fg);
+    background: transparent;
+    font-family: var(--font-mono);
+    font-stretch: 87.5%;
+    font-size: 0.625rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    cursor: pointer;
+  }
+
+  .copy:hover,
+  .copy:global(.is-copied) {
+    background: var(--fg);
+    color: var(--bg);
+  }
+
+  pre {
+    margin: 0;
+    padding: 1rem 1.1rem;
+    overflow-x: auto;
+    font-size: 0.78rem;
+    line-height: 1.7;
+    tab-size: 2;
+  }
+
+  pre:focus-visible {
+    outline-offset: -3px;
+  }
+</style>

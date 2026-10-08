@@ -1,0 +1,146 @@
+---
+import Wordmark from './Wordmark.astro';
+import { otherLang, routePath, type Lang } from '../i18n/routes.ts';
+import { t } from '../i18n/ui.ts';
+import { FEED_PATHS, SITE } from '../site.ts';
+
+interface Props {
+  lang: Lang;
+  alternates?: Record<Lang, string> | null;
+}
+
+const { lang, alternates } = Astro.props;
+const other = otherLang(lang);
+const year = new Date().getUTCFullYear();
+---
+
+<footer class="footer">
+  <div class="wrap">
+    <div class="giant" aria-hidden="true"><Wordmark size="giant" /></div>
+    <div class="cols">
+      <section>
+        <h2 class="kicker">{t(lang, 'footer.service')}</h2>
+        <ul>
+          <li><a href={routePath('feeds', lang)}>{t(lang, 'nav.feeds')}</a></li>
+          <li><a href={routePath('lookup', lang)}>{t(lang, 'nav.lookup')}</a></li>
+          <li><a href={routePath('sources', lang)}>{t(lang, 'nav.sources')}</a></li>
+          <li><a href={routePath('integrations', lang)}>{t(lang, 'nav.integrations')}</a></li>
+          <li><a href={routePath('docs', lang)}>{t(lang, 'nav.docs')}</a></li>
+        </ul>
+      </section>
+      <section>
+        <h2 class="kicker">{t(lang, 'footer.data')}</h2>
+        <ul class="mono-list">
+          <li><a href={FEED_PATHS.url} rel="nofollow">urls.txt</a></li>
+          <li><a href={FEED_PATHS.domain} rel="nofollow">domains.txt</a></li>
+          <li><a href={FEED_PATHS.ipv4} rel="nofollow">ipv4.txt</a></li>
+          <li><a href="/feeds/SHA256SUMS" rel="nofollow">SHA256SUMS</a></li>
+          <li><a href="/healthz" rel="nofollow">{t(lang, 'footer.health')}</a></li>
+        </ul>
+      </section>
+      <section>
+        <h2 class="kicker">{t(lang, 'footer.project')}</h2>
+        <ul>
+          <li><a href={SITE.repo} rel="noopener">{t(lang, 'footer.source')} ↗</a></li>
+          <li><a href={SITE.issues} rel="noopener">{t(lang, 'footer.report')} ↗</a></li>
+          <li><a href={routePath('console', lang)} rel="nofollow">{t(lang, 'footer.console')}</a></li>
+          <li>
+            <a href={alternates?.[other] ?? routePath('home', other)} hreflang={other === 'pt' ? 'pt-BR' : 'en'}>
+              {t(lang, 'lang.switch')}
+            </a>
+          </li>
+        </ul>
+      </section>
+      <section class="colophon">
+        <p>{t(lang, 'footer.colophon')}</p>
+        <p class="muted">{t(lang, 'footer.disclaimer')}</p>
+      </section>
+    </div>
+    <div class="baseline">
+      <span>© {year} {SITE.org}</span>
+      <span>{SITE.wordmark.left}.{SITE.wordmark.right}</span>
+    </div>
+  </div>
+</footer>
+
+<style>
+  .footer {
+    margin-top: clamp(4rem, 10vw, 8rem);
+    padding-top: clamp(2rem, 5vw, 3.5rem);
+    border-top: 1px solid var(--line);
+    overflow: hidden;
+  }
+
+  .giant {
+    margin-bottom: clamp(2rem, 4vw, 3rem);
+    color: transparent;
+    -webkit-text-stroke: 1.5px var(--fg);
+    user-select: none;
+  }
+
+  .cols {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(0, 1.6fr);
+    gap: 2rem;
+    padding: 2rem 0;
+    border-top: 1px solid var(--line);
+  }
+
+  h2 {
+    margin-bottom: 0.9rem;
+    font-weight: 500;
+  }
+
+  ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  li + li {
+    margin-top: 0.4rem;
+  }
+
+  ul a {
+    text-decoration: none;
+    font-weight: 500;
+  }
+
+  ul a:hover {
+    text-decoration: underline;
+  }
+
+  .mono-list {
+    font-family: var(--font-mono);
+    font-stretch: 87.5%;
+    font-size: 0.8125rem;
+  }
+
+  .colophon p {
+    font-size: 0.9375rem;
+  }
+
+  .baseline {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1rem 0 2rem;
+    border-top: 1px solid var(--line-soft);
+    font-family: var(--font-mono);
+    font-stretch: 87.5%;
+    font-size: 0.6875rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--fg-2);
+  }
+
+  @media (max-width: 860px) {
+    .cols {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .colophon {
+      grid-column: 1 / -1;
+    }
+  }
+</style>

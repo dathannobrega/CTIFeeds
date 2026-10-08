@@ -1,0 +1,320 @@
+---
+import Wordmark from './Wordmark.astro';
+import { otherLang, routePath, type Lang, type RouteKey } from '../i18n/routes.ts';
+import { t } from '../i18n/ui.ts';
+
+interface Props {
+  lang: Lang;
+  active?: RouteKey | undefined;
+  alternates?: Record<Lang, string> | null;
+}
+
+const { lang, active, alternates } = Astro.props;
+const other = otherLang(lang);
+const switchHref = alternates?.[other] ?? routePath('home', other);
+
+const nav: { key: RouteKey; label: string }[] = [
+  { key: 'feeds', label: t(lang, 'nav.feeds') },
+  { key: 'lookup', label: t(lang, 'nav.lookup') },
+  { key: 'sources', label: t(lang, 'nav.sources') },
+  { key: 'integrations', label: t(lang, 'nav.integrations') },
+  { key: 'docs', label: t(lang, 'nav.docs') },
+];
+---
+
+<aside class="status" aria-label={t(lang, 'status.label')} data-sources-health>
+  <div class="wrap status-inner">
+    <span class="pulse" aria-hidden="true"></span>
+    <span class="status-online">
+      <span class="item">
+        {t(lang, 'status.edition')}{' '}<b data-stat="published_at" data-fmt="edition">—</b>
+      </span>
+      <span class="item">
+        {t(lang, 'status.collected')}{' '}<b data-stat="collected_at" data-fmt="clock">—</b>
+      </span>
+      <span class="item">
+        <b data-stat="totals.all" data-fmt="number">—</b>{' '}{t(lang, 'status.indicators')}
+      </span>
+      <span class="item">
+        <b data-stat="sources.ok" data-fmt="number">—</b>/<b data-stat="sources.configured" data-fmt="number">—</b>{' '}{t(lang, 'status.sources')}
+      </span>
+      <span class="item">
+        {t(lang, 'status.next')}{' '}<b data-stat="next_collection_at" data-fmt="relative">—</b>
+      </span>
+    </span>
+    <span class="status-pending">{t(lang, 'status.loading')}</span>
+    <span class="status-offline">{t(lang, 'status.offline')}</span>
+  </div>
+</aside>
+
+<header class="masthead">
+  <div class="wrap bar">
+    <a class="home" href={routePath('home', lang)} aria-label={`cti.segark — ${t(lang, 'breadcrumb.home')}`}>
+      <Wordmark />
+    </a>
+    <nav class="nav" aria-label={t(lang, 'nav.label')}>
+      <ol>
+        {
+          nav.map((item, index) => (
+            <li>
+              <a href={routePath(item.key, lang)} aria-current={active === item.key ? 'page' : undefined}>
+                <span class="num" aria-hidden="true">
+                  {String(index + 1).padStart(2, '0')}
+                </span>
+                {item.label}
+              </a>
+            </li>
+          ))
+        }
+      </ol>
+    </nav>
+    <div class="tools">
+      <a class="lang" href={switchHref} hreflang={other === 'pt' ? 'pt-BR' : 'en'} lang={other === 'pt' ? 'pt-BR' : 'en'}>
+        <span class="visually-hidden">{t(lang, 'lang.switch')}</span>
+        <span aria-hidden="true">{t(lang, 'lang.short')}</span>
+      </a>
+      <button class="theme" type="button" data-theme-toggle aria-pressed="false" title={t(lang, 'theme.toggle')}>
+        <span class="theme-glyph" aria-hidden="true"></span>
+        <span class="visually-hidden">{t(lang, 'theme.toggle')}: </span>
+        <span class="theme-label" data-theme-label>{t(lang, 'theme.light')}</span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<style>
+  /* Faixa de status: uma linha de teletipo com o estado do serviço. */
+  .status {
+    background: var(--inverse-bg);
+    color: var(--inverse-fg);
+    font-family: var(--font-mono);
+    font-stretch: 87.5%;
+    font-size: 0.65625rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .status-inner {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+    min-height: 2rem;
+    overflow-x: auto;
+    white-space: nowrap;
+    scrollbar-width: none;
+  }
+
+  .status-inner::-webkit-scrollbar {
+    display: none;
+  }
+
+  .status-online {
+    display: none;
+    gap: 1.4rem;
+  }
+
+  .status-online .item + .item::before {
+    content: '·';
+    margin-right: 1.4rem;
+    color: var(--inverse-fg-2);
+  }
+
+  .status b {
+    font-weight: 600;
+    color: var(--inverse-fg);
+  }
+
+  .status-pending,
+  .status-offline {
+    display: none;
+    color: var(--inverse-fg-2);
+  }
+
+  :global(html[data-api='pending']) .status-pending,
+  :global(html[data-api='offline']) .status-offline {
+    display: inline;
+  }
+
+  :global(html[data-api='online']) .status-online {
+    display: inline-flex;
+  }
+
+  .pulse {
+    flex: none;
+    width: 0.5rem;
+    height: 0.5rem;
+    background: var(--inverse-fg-2);
+  }
+
+  .status[data-health='ok'] .pulse {
+    background: var(--signal);
+    animation: blink 2.4s steps(1, end) infinite;
+  }
+
+  .status[data-health='degraded'] .pulse {
+    background: repeating-linear-gradient(-45deg, var(--signal) 0 1.5px, transparent 1.5px 3px);
+    outline: 1px solid var(--signal);
+  }
+
+  .status[data-health='offline'] .pulse {
+    background: transparent;
+    outline: 1px solid var(--inverse-fg-2);
+  }
+
+  @keyframes blink {
+    50% {
+      opacity: 0.15;
+    }
+  }
+
+  /* Barra principal ------------------------------------------------------------ */
+
+  .masthead {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: var(--bg);
+    border-bottom: 1px solid var(--line);
+    box-shadow: 0 3px 0 -2px var(--bg), 0 4px 0 -2px var(--line);
+  }
+
+  .bar {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 1.5rem;
+    min-height: 4rem;
+  }
+
+  .home {
+    text-decoration: none;
+    font-size: 1.05rem;
+  }
+
+  .nav ol {
+    display: flex;
+    justify-content: center;
+    gap: clamp(0.75rem, 2vw, 2rem);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .nav a {
+    position: relative;
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.45em;
+    padding: 0.5rem 0;
+    font-weight: 600;
+    font-stretch: 85%;
+    font-size: 0.9375rem;
+    letter-spacing: 0.01em;
+    text-transform: uppercase;
+    text-decoration: none;
+  }
+
+  .nav .num {
+    font-family: var(--font-mono);
+    font-stretch: 87.5%;
+    font-size: 0.625rem;
+    font-weight: 500;
+    color: var(--fg-2);
+  }
+
+  .nav a::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0.15rem;
+    height: 2px;
+    background: var(--signal);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.25s var(--ease);
+  }
+
+  .nav a:hover::after,
+  .nav a[aria-current='page']::after {
+    transform: scaleX(1);
+  }
+
+  .nav a[aria-current='page'] .num {
+    color: var(--signal-ink);
+  }
+
+  .tools {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .lang,
+  .theme {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 2.25rem;
+    padding: 0 0.7rem;
+    border: 1.5px solid var(--fg);
+    background: transparent;
+    font-family: var(--font-mono);
+    font-stretch: 87.5%;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    text-decoration: none;
+    cursor: pointer;
+  }
+
+  .lang:hover,
+  .theme:hover {
+    background: var(--fg);
+    color: var(--bg);
+  }
+
+  .theme-glyph {
+    width: 0.8rem;
+    height: 0.8rem;
+    border: 1.5px solid currentColor;
+    border-radius: 50%;
+    background: linear-gradient(90deg, currentColor 50%, transparent 50%);
+  }
+
+  @media (max-width: 960px) {
+    .bar {
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 0 1rem;
+      padding-top: 0.6rem;
+    }
+
+    .nav {
+      grid-column: 1 / -1;
+      grid-row: 2;
+      margin-inline: calc(var(--gutter) * -1);
+      padding-inline: var(--gutter);
+      overflow-x: auto;
+      scrollbar-width: none;
+      mask-image: linear-gradient(90deg, #000 85%, transparent);
+    }
+
+    .nav::-webkit-scrollbar {
+      display: none;
+    }
+
+    .nav ol {
+      justify-content: flex-start;
+      padding-bottom: 0.25rem;
+    }
+
+    .nav a {
+      white-space: nowrap;
+    }
+
+    .theme-label {
+      display: none;
+    }
+  }
+</style>

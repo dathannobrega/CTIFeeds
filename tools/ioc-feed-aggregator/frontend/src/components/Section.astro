@@ -1,0 +1,95 @@
+---
+/** Seção numerada: coluna de margem com "§ 01" e rótulo, corpo à direita. */
+interface Props {
+  id: string;
+  num: string;
+  label: string;
+  title: string;
+  lede?: string;
+  tone?: 'plain' | 'inverse';
+}
+
+const { id, num, label, title, lede, tone = 'plain' } = Astro.props;
+---
+
+<section class:list={['sec', tone]} id={id} aria-labelledby={`${id}-title`}>
+  <div class="wrap grid">
+    <div class="margin">
+      <span class="num">§ {num}</span>
+      <span class="kicker">{label}</span>
+    </div>
+    <div class="body">
+      <header class="head">
+        <h2 id={`${id}-title`}>{title}</h2>
+        {lede && <p class="lede">{lede}</p>}
+      </header>
+      <slot />
+    </div>
+  </div>
+</section>
+
+<style>
+  .sec {
+    padding-block: clamp(3.5rem, 8vw, 6.5rem);
+    border-top: 1px solid var(--line);
+  }
+
+  .inverse {
+    border-top: 0;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 10fr);
+    gap: 2rem;
+  }
+
+  .margin {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    align-self: start;
+    position: sticky;
+    top: 6.5rem;
+  }
+
+  .num {
+    font-family: var(--font-mono);
+    font-stretch: 87.5%;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    color: var(--signal-ink);
+  }
+
+  .head {
+    display: grid;
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+    gap: 1.5rem 3rem;
+    align-items: end;
+    margin-bottom: clamp(2rem, 4vw, 3rem);
+  }
+
+  .head .lede {
+    margin: 0;
+    color: var(--fg-2);
+    font-size: 1.0625rem;
+  }
+
+  @media (max-width: 900px) {
+    .grid {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 1rem;
+    }
+
+    .margin {
+      position: static;
+      flex-direction: row;
+      align-items: baseline;
+      gap: 1rem;
+    }
+
+    .head {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+</style>

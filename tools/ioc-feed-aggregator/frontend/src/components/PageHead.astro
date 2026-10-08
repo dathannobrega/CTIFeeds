@@ -1,0 +1,64 @@
+---
+/** Abertura das páginas internas: rótulo, título grande e linha fina. */
+interface Props {
+  kicker: string;
+  title: string;
+  lede?: string;
+}
+
+const { kicker, title, lede } = Astro.props;
+---
+
+<header class="page-head">
+  <div class="wrap">
+    <p class="kicker"><span class="mark" aria-hidden="true">■</span> {kicker}</p>
+    <div class="row">
+      <h1>{title}</h1>
+      {lede && <p class="lede">{lede}</p>}
+    </div>
+    <slot />
+  </div>
+</header>
+
+<style>
+  .page-head {
+    padding-top: clamp(1.75rem, 4vw, 3rem);
+    padding-bottom: clamp(2.5rem, 5vw, 4rem);
+  }
+
+  .kicker {
+    max-width: none;
+    margin: 0 0 1.5rem;
+    padding-bottom: 0.9rem;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .mark {
+    color: var(--signal-ink);
+    margin-right: 0.35rem;
+  }
+
+  .row {
+    display: grid;
+    grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+    gap: 1.5rem clamp(2rem, 5vw, 5rem);
+    align-items: end;
+  }
+
+  h1 {
+    font-size: clamp(2.6rem, 7vw, 6.25rem);
+    font-stretch: 64%;
+    line-height: 0.88;
+  }
+
+  .lede {
+    margin: 0;
+    color: var(--fg-2);
+  }
+
+  @media (max-width: 860px) {
+    .row {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+</style>

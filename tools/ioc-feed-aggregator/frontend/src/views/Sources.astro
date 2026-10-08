@@ -1,0 +1,251 @@
+---
+import Layout from '../layouts/Layout.astro';
+import PageHead from '../components/PageHead.astro';
+import Section from '../components/Section.astro';
+import { routePath, type Lang } from '../i18n/routes.ts';
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+
+const C = {
+  pt: {
+    title: 'Fontes de inteligência de ameaças e estado da coleta',
+    description:
+      'Veja as fontes públicas de inteligência de ameaças que alimentam os feeds de IoC, com estado, número de indicadores, tempo de resposta e horário da última coleta.',
+    kicker: 'Fontes',
+    h1: 'Fontes e estado da coleta',
+    lede: 'Cada fonte é baixada a cada hora. Esta página mostra o resultado da última rodada, fonte por fonte.',
+    configured: 'configuradas',
+    ok: 'respondendo',
+    stale: 'usando cópia anterior',
+    failed: 'com falha',
+    collected: 'Última coleta',
+    cols: ['Estado', 'Tipo', 'Fonte', 'Indicadores', 'Inválidos', 'Tempo', 'Coletada', 'Erro'],
+    loading: 'Carregando fontes…',
+    empty: 'Nenhuma fonte configurada.',
+    offline: 'A API não respondeu. Os arquivos de feed continuam disponíveis.',
+    states: { ok: 'ok', stale: 'obsoleta', failed: 'falha', pending: 'aguardando' },
+    howLabel: 'Comportamento',
+    howTitle: 'Quando uma fonte falha',
+    how: [
+      ['ok', 'A fonte respondeu e o conteúdo foi validado e incorporado ao feed.'],
+      ['obsoleta', 'A fonte falhou nesta rodada; a última cópia válida continua no feed até a próxima tentativa.'],
+      ['falha', 'A fonte falhou e nunca respondeu antes: não contribui com indicadores.'],
+    ],
+    note: 'URLs de fontes são exibidas sem query string nem credenciais.',
+  },
+  en: {
+    title: 'Threat intelligence sources and collection status',
+    description:
+      'See the public threat intelligence sources behind the IoC feeds, with status, indicator count, response time and last collection time.',
+    kicker: 'Sources',
+    h1: 'Sources and collection status',
+    lede: 'Every source is fetched hourly. This page shows the outcome of the latest round, source by source.',
+    configured: 'configured',
+    ok: 'responding',
+    stale: 'on previous copy',
+    failed: 'failing',
+    collected: 'Last collection',
+    cols: ['Status', 'Type', 'Source', 'Indicators', 'Invalid', 'Time', 'Fetched', 'Error'],
+    loading: 'Loading sources…',
+    empty: 'No sources configured.',
+    offline: 'The API did not respond. Feed files are still available.',
+    states: { ok: 'ok', stale: 'stale', failed: 'failed', pending: 'pending' },
+    howLabel: 'Behaviour',
+    howTitle: 'When a source fails',
+    how: [
+      ['ok', 'The source answered and its content was validated and merged into the feed.'],
+      ['stale', 'The source failed this round; its last valid copy stays in the feed until the next attempt.'],
+      ['failed', 'The source failed and never answered before: it contributes no indicators.'],
+    ],
+    note: 'Source URLs are shown without query string or credentials.',
+  },
+}[lang];
+
+const strings = JSON.stringify({ cols: C.cols, loading: C.loading, empty: C.empty, offline: C.offline, states: C.states }).replaceAll(
+  '<',
+  '\\u003c',
+);
+---
+
+<Layout
+  lang={lang}
+  title={C.title}
+  description={C.description}
+  path={routePath('sources', lang)}
+  alternates={{ pt: routePath('sources', 'pt'), en: routePath('sources', 'en') }}
+  active="sources"
+  breadcrumbs={[{ name: C.kicker, path: routePath('sources', lang) }]}
+>
+  <PageHead kicker={C.kicker} title={C.h1} lede={C.lede}>
+    <dl class="tally">
+      <div><dt>{C.configured}</dt><dd data-stat="sources.configured" data-fmt="number">—</dd></div>
+      <div><dt>{C.ok}</dt><dd data-stat="sources.ok" data-fmt="number">—</dd></div>
+      <div class="is-stale"><dt>{C.stale}</dt><dd data-stat="sources.stale" data-fmt="number">—</dd></div>
+      <div class="is-failed"><dt>{C.failed}</dt><dd data-stat="sources.failed" data-fmt="number">—</dd></div>
+      <div class="when">
+        <dt>{C.collected}</dt>
+        <dd class="mono"><span data-stat="collected_at" data-fmt="datetime">—</span></dd>
+      </div>
+    </dl>
+  </PageHead>
+
+  <section class="wrap list" aria-label={C.h1}>
+    <div class="table-scroll" data-sources>
+      <p class="mono muted loading">{C.loading}</p>
+    </div>
+    <p class="note mono muted">{C.note}</p>
+  </section>
+
+  <Section id="behaviour" num="01" label={C.howLabel} title={C.howTitle}>
+    <dl class="how">
+      {
+        C.how.map(([state, text], index) => (
+          <div>
+            <dt>
+              <span class:list={['state', ['ok', 'stale', 'failed'][index]]}>
+                <span class="sq" aria-hidden="true" />
+                {state}
+              </span>
+            </dt>
+            <dd>{text}</dd>
+          </div>
+        ))
+      }
+    </dl>
+  </Section>
+
+  <script type="application/json" id="sources-strings" set:html={strings} />
+</Layout>
+
+<script>
+  import { runSourcesPage } from '../scripts/sources.ts';
+
+  runSourcesPage();
+</script>
+
+<style>
+  .tally {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) minmax(0, 2fr);
+    margin: clamp(2rem, 4vw, 3rem) 0 0;
+    border-top: 3px solid var(--fg);
+  }
+
+  .tally div {
+    padding: 1rem 1.25rem 0 0;
+  }
+
+  .tally dt {
+    font-family: var(--font-mono);
+    font-stretch: 87.5%;
+    font-size: 0.625rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--fg-2);
+  }
+
+  .tally dd {
+    margin: 0.3rem 0 0;
+    font-size: clamp(2.5rem, 6vw, 4.5rem);
+    font-weight: 800;
+    font-stretch: 62%;
+    line-height: 0.9;
+  }
+
+  .tally .is-failed dd {
+    color: var(--signal-ink);
+  }
+
+  .tally .when dd {
+    font-size: 0.875rem;
+    font-weight: 600;
+    line-height: 1.4;
+  }
+
+  .list {
+    padding-bottom: clamp(2rem, 4vw, 3rem);
+  }
+
+  .loading {
+    padding: 1.25rem 0;
+    font-size: 0.75rem;
+  }
+
+  .note {
+    margin-top: 0.85rem;
+    font-size: 0.6875rem;
+  }
+
+  :global(.state) {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-family: var(--font-mono);
+    font-stretch: 87.5%;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  :global(.state .sq) {
+    width: 0.7rem;
+    height: 0.7rem;
+    border: 1.5px solid var(--fg);
+  }
+
+  :global(.state.ok .sq) {
+    background: var(--fg);
+  }
+
+  :global(.state.stale .sq) {
+    background-image: repeating-linear-gradient(-45deg, var(--fg) 0 1.5px, transparent 1.5px 3.5px);
+  }
+
+  :global(.state.failed) {
+    color: var(--signal-ink);
+  }
+
+  :global(.state.failed .sq) {
+    border-color: var(--signal);
+    background: var(--signal);
+  }
+
+  .how {
+    margin: 0;
+    border-top: 1.5px solid var(--fg);
+  }
+
+  .how div {
+    display: grid;
+    grid-template-columns: 10rem minmax(0, 1fr);
+    gap: 1.5rem;
+    padding: 1.1rem 0;
+    border-bottom: 1px solid var(--line-soft);
+  }
+
+  .how dd {
+    margin: 0;
+    color: var(--fg-2);
+  }
+
+  @media (max-width: 860px) {
+    .tally {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .tally .when {
+      grid-column: 1 / -1;
+    }
+
+    .how div {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 0.5rem;
+    }
+  }
+</style>

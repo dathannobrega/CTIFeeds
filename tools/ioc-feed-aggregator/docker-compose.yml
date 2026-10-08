@@ -1,33 +1,63 @@
-version: '3.9'
+# Stack completa: PostgreSQL + API (Flask/gunicorn) + frontend (nginx com o site estático).
+# Só o frontend é publicado; ele serve o site, os arquivos de feed e encaminha /api para a API.
+#
+#   cp .env.example .env   # defina ADMIN_TOKEN e POSTGRES_PASSWORD
+#   docker compose up -d --build
+#
+name: ioc-feed-aggregator
+
 services:
   db:
     image: postgres:15
+    restart: unless-stopped
     environment:
       POSTGRES_DB: ctifeeds
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U postgres -d ctifeeds']
       interval: 5s
       timeout: 5s
-      retries: 5
+      retries: 10
+
   web:
     build: .
-    command: flask run --host=0.0.0.0 --port=5000
-    ports:
-      - "5000:5000"
+    restart: unless-stopped
     environment:
-      - DATABASE_URL=postgresql+psycopg2://postgres:postgres@db:5432/ctifeeds
-      - FEED_CONFIG_PATH=/app/config/feeds.yaml
-      - CACHE_DIR=/app/data
+      DATABASE_URL: postgresql+psycopg2://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/ctifeeds
+      FEED_CONFIG_PATH: /app/config/feeds.yaml
+      CACHE_DIR: /app/data
+      ADMIN_TOKEN: ${ADMIN_TOKEN:-}
+      REFRESH_INTERVAL_SECONDS: ${REFRESH_INTERVAL_SECONDS:-3600}
+      WEB_CONCURRENCY: ${WEB_CONCURRENCY:-2}
     volumes:
-      - .:/app
+      # Edite config/feeds.yaml e reinicie o serviço web; não precisa rebuild.
+      - ./config:/app/config:ro
       - cache_data:/app/data
     depends_on:
       db:
         condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        SITE_URL: ${SITE_URL:-https://cti.segark.com}
+    restart: unless-stopped
+    environment:
+      API_UPSTREAM: web:5000
+      API_RATE_LIMIT: ${API_RATE_LIMIT:-10r/s}
+      API_RATE_BURST: ${API_RATE_BURST:-40}
+    ports:
+      # Mesma porta de antes: um proxy reverso que apontava para :5000 passa a receber o site inteiro.
+      - '${HTTP_PORT:-5000}:8080'
+    volumes:
+      - cache_data:/srv/feeds:ro
+    depends_on:
+      - web
+
 volumes:
   pgdata:
   cache_data:

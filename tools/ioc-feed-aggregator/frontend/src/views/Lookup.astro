@@ -1,0 +1,537 @@
+---
+import Layout from '../layouts/Layout.astro';
+import PageHead from '../components/PageHead.astro';
+import Section from '../components/Section.astro';
+import { routePath, type Lang } from '../i18n/routes.ts';
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+const site = String(Astro.site ?? 'https://cti.segark.com').replace(/\/$/, '');
+
+const C = {
+  pt: {
+    title: 'Consultar IP, domínio ou URL em blocklists de IoC',
+    description:
+      'Verifique se um endereço IP, domínio ou URL está nos feeds de IoC. Aceita valores defanged, consulta em lote de até 500 indicadores e mostra domínios pai e hosts relacionados.',
+    kicker: 'Consulta',
+    h1: 'Consultar indicador',
+    lede: 'Um valor ou uma lista inteira. Formatos defanged como hxxp:// e [.] são aceitos e convertidos.',
+    single: 'Único',
+    batch: 'Em lote',
+    mode: 'Modo de consulta',
+    inputLabel: 'IP, domínio ou URL',
+    placeholder: 'ex.: login-portal[.]example ou 203.0.113.7',
+    submit: 'Consultar',
+    batchLabel: 'Um indicador por linha (até 500)',
+    batchPlaceholder: 'hxxp://exemplo[.]com/login\nupdate-billing[.]example\n203.0.113.7',
+    batchSubmit: 'Consultar lista',
+    lines: 'linhas',
+    privacy: 'As consultas não são gravadas em banco de dados.',
+    legendLabel: 'Leitura',
+    legendTitle: 'Como ler o resultado',
+    legend: [
+      ['Listado', 'O valor exato está publicado no feed do tipo detectado e será bloqueado por quem consome a lista.'],
+      ['Relacionado', 'O valor em si não está listado, mas o domínio pai, o host da URL ou o IP do host está.'],
+      ['Excluído', 'O valor está na lista de exclusão (falso positivo revisado) e não sai em nenhum feed.'],
+      ['Não listado', 'Nada encontrado. Não é atestado de reputação: só significa que as fontes atuais não o citam.'],
+      ['Inválido', 'O texto não parece um IPv4, domínio ou URL com esquema. IPv6 ainda não é suportado.'],
+    ],
+    appName: 'Consulta de IoC',
+  },
+  en: {
+    title: 'Check an IP, domain or URL against IoC blocklists',
+    description:
+      'Check whether an IP address, domain or URL is in the IoC feeds. Accepts defanged values, bulk lookups of up to 500 indicators, and shows parent domains and related hosts.',
+    kicker: 'Lookup',
+    h1: 'Look up an indicator',
+    lede: 'One value or a whole list. Defanged forms such as hxxp:// and [.] are accepted and converted.',
+    single: 'Single',
+    batch: 'Bulk',
+    mode: 'Lookup mode',
+    inputLabel: 'IP, domain or URL',
+    placeholder: 'e.g. login-portal[.]example or 203.0.113.7',
+    submit: 'Look up',
+    batchLabel: 'One indicator per line (up to 500)',
+    batchPlaceholder: 'hxxp://example[.]com/login\nupdate-billing[.]example\n203.0.113.7',
+    batchSubmit: 'Look up list',
+    lines: 'lines',
+    privacy: 'Lookups are not stored in any database.',
+    legendLabel: 'Reading',
+    legendTitle: 'How to read the result',
+    legend: [
+      ['Listed', 'The exact value is published in the feed for the detected type and will be blocked by anyone consuming the list.'],
+      ['Related', 'The value itself is not listed, but its parent domain, the URL host or the host IP is.'],
+      ['Excluded', 'The value is on the exclusion list (reviewed false positive) and is left out of every feed.'],
+      ['Not listed', 'Nothing found. This is not a reputation verdict: it only means current sources do not mention it.'],
+      ['Invalid', 'The text does not look like an IPv4, a domain or a URL with a scheme. IPv6 is not supported yet.'],
+    ],
+    appName: 'IoC lookup',
+  },
+}[lang];
+
+const R =
+  lang === 'pt'
+    ? {
+        verdicts: { listed: 'Listado', related: 'Relacionado', excluded: 'Excluído', clear: 'Não listado', invalid: 'Inválido' },
+        fields: { value: 'Valor', type: 'Tipo', feed: 'Feed', excluded: 'Na exclusão desde', related: 'Relacionados', updated: 'Feeds de' },
+        relations: { parent_domain: 'domínio pai listado', url_host: 'host da URL listado', url_variant: 'variante da URL listada' },
+        detected: 'detectado',
+        unknown: 'tipo não reconhecido',
+        summary: { total: 'Total', listed: 'Listados', related: 'Relacionados', excluded: 'Excluídos', invalid: 'Inválidos' },
+        table: { verdict: 'Resultado', type: 'Tipo', value: 'Valor', detail: 'Detalhe' },
+        copyListed: 'Copiar listados',
+        csv: 'Baixar CSV',
+        none: '—',
+        error: 'Não foi possível consultar agora. Tente de novo em instantes.',
+        tooMany: 'Máximo de 500 linhas por consulta.',
+        empty: 'Cole ao menos um indicador.',
+        no: 'não',
+      }
+    : {
+        verdicts: { listed: 'Listed', related: 'Related', excluded: 'Excluded', clear: 'Not listed', invalid: 'Invalid' },
+        fields: { value: 'Value', type: 'Type', feed: 'Feed', excluded: 'Excluded since', related: 'Related', updated: 'Feeds as of' },
+        relations: { parent_domain: 'parent domain listed', url_host: 'URL host listed', url_variant: 'URL variant listed' },
+        detected: 'detected',
+        unknown: 'unrecognised type',
+        summary: { total: 'Total', listed: 'Listed', related: 'Related', excluded: 'Excluded', invalid: 'Invalid' },
+        table: { verdict: 'Result', type: 'Type', value: 'Value', detail: 'Detail' },
+        copyListed: 'Copy listed',
+        csv: 'Download CSV',
+        none: '—',
+        error: 'The lookup failed. Please try again in a moment.',
+        tooMany: 'At most 500 lines per lookup.',
+        empty: 'Paste at least one indicator.',
+        no: 'no',
+      };
+
+const strings = JSON.stringify(R).replaceAll('<', '\\u003c');
+const jsonLd = [
+  {
+    '@type': 'WebApplication',
+    '@id': `${site}${routePath('lookup', lang)}#app`,
+    name: C.appName,
+    url: `${site}${routePath('lookup', lang)}`,
+    description: C.description,
+    applicationCategory: 'SecurityApplication',
+    operatingSystem: 'Any',
+    browserRequirements: 'Requires JavaScript',
+    isAccessibleForFree: true,
+    offers: { '@type': 'Offer', price: '0', priceCurrency: 'BRL' },
+    publisher: { '@id': `${site}/#organization` },
+  },
+];
+---
+
+<Layout
+  lang={lang}
+  title={C.title}
+  description={C.description}
+  path={routePath('lookup', lang)}
+  alternates={{ pt: routePath('lookup', 'pt'), en: routePath('lookup', 'en') }}
+  active="lookup"
+  breadcrumbs={[{ name: C.kicker, path: routePath('lookup', lang) }]}
+  jsonLd={jsonLd}
+>
+  <PageHead kicker={C.kicker} title={C.h1} lede={C.lede} />
+
+  <section class="tool wrap" aria-label={C.h1} data-lookup>
+    <fieldset class="modes">
+      <legend class="visually-hidden">{C.mode}</legend>
+      <label><input type="radio" name="mode" value="single" checked /><span>{C.single}</span></label>
+      <label><input type="radio" name="mode" value="batch" /><span>{C.batch}</span></label>
+    </fieldset>
+
+    <form class="single" data-form="single" novalidate>
+      <label class="visually-hidden" for="lookup-q">{C.inputLabel}</label>
+      <div class="prompt">
+        <span class="caret" aria-hidden="true">›</span>
+        <input
+          id="lookup-q"
+          class="prompt-input"
+          name="q"
+          type="text"
+          inputmode="url"
+          autocomplete="off"
+          autocapitalize="off"
+          spellcheck="false"
+          maxlength="2048"
+          placeholder={C.placeholder}
+          aria-describedby="lookup-detect"
+        />
+        <button class="btn btn--solid" type="submit">{C.submit}<span class="arrow" aria-hidden="true">↵</span></button>
+      </div>
+      <p class="detect mono" id="lookup-detect" aria-live="polite" data-detect></p>
+    </form>
+
+    <form class="batch" data-form="batch" hidden novalidate>
+      <div class="field">
+        <label for="lookup-batch">{C.batchLabel}</label>
+        <textarea id="lookup-batch" class="input" name="values" spellcheck="false" placeholder={C.batchPlaceholder}></textarea>
+      </div>
+      <div class="batch-bar">
+        <span class="mono muted"><span data-line-count>0</span>/500 {C.lines}</span>
+        <button class="btn btn--solid" type="submit">{C.batchSubmit}<span class="arrow" aria-hidden="true">↵</span></button>
+      </div>
+    </form>
+
+    <p class="privacy mono muted">{C.privacy}</p>
+    <div class="result" data-result aria-live="polite"></div>
+  </section>
+
+  <Section id="legend" num="01" label={C.legendLabel} title={C.legendTitle}>
+    <dl class="legend">
+      {
+        C.legend.map(([name, text], index) => (
+          <div>
+            <dt>
+              <span class:list={['stamp', 'small', ['listed', 'related', 'excluded', 'clear', 'invalid'][index]]}>{name}</span>
+            </dt>
+            <dd>{text}</dd>
+          </div>
+        ))
+      }
+    </dl>
+  </Section>
+
+  <script type="application/json" id="lookup-strings" set:html={strings} />
+</Layout>
+
+<script>
+  import { runLookupPage } from '../scripts/lookup.ts';
+
+  runLookupPage();
+</script>
+
+<style>
+  .tool {
+    padding-bottom: clamp(3rem, 6vw, 5rem);
+  }
+
+  .modes {
+    display: inline-flex;
+    margin: 0 0 1.25rem;
+    padding: 0;
+    border: 1.5px solid var(--fg);
+  }
+
+  .modes label {
+    position: relative;
+    cursor: pointer;
+  }
+
+  .modes input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .modes span {
+    display: block;
+    padding: 0.6rem 1.1rem;
+    font-family: var(--font-mono);
+    font-stretch: 87.5%;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .modes input:checked + span {
+    background: var(--fg);
+    color: var(--bg);
+  }
+
+  .modes input:focus-visible + span {
+    outline: 2px solid var(--signal);
+    outline-offset: 2px;
+  }
+
+  .prompt {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.6rem 0.6rem 0.6rem 1.1rem;
+    border: 2px solid var(--fg);
+    background: var(--bg);
+  }
+
+  .prompt:focus-within {
+    border-color: var(--signal);
+    box-shadow: 0 0 0 1px var(--signal);
+  }
+
+  .caret {
+    font-family: var(--font-mono);
+    font-size: 1.6rem;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--signal-ink);
+  }
+
+  .prompt-input {
+    width: 100%;
+    min-height: 3.5rem;
+    border: 0;
+    background: transparent;
+    font-family: var(--font-mono);
+    font-stretch: 87.5%;
+    font-size: clamp(1rem, 2vw, 1.4rem);
+  }
+
+  .prompt-input:focus {
+    outline: none;
+  }
+
+  .prompt-input::placeholder {
+    color: var(--fg-3);
+  }
+
+  .detect {
+    min-height: 1.5rem;
+    margin: 0.7rem 0 0;
+    font-size: 0.6875rem;
+    letter-spacing: 0.04em;
+    color: var(--fg-2);
+  }
+
+  .detect :global(.tag) {
+    margin-right: 0.5rem;
+  }
+
+  .batch textarea {
+    min-height: 14rem;
+  }
+
+  .batch-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 0.75rem;
+    font-size: 0.75rem;
+  }
+
+  .privacy {
+    margin: 1rem 0 0;
+    font-size: 0.6875rem;
+  }
+
+  .result:not(:empty) {
+    margin-top: clamp(2rem, 4vw, 3rem);
+  }
+
+  /* Ficha de resultado ---------------------------------------------------------- */
+
+  .result :global(.card) {
+    display: grid;
+    grid-template-columns: minmax(0, 4fr) minmax(0, 8fr);
+    gap: 2rem;
+    padding: clamp(1.25rem, 3vw, 2rem);
+    border: 1.5px solid var(--fg);
+  }
+
+  .result :global(.card dl) {
+    margin: 0;
+    font-family: var(--font-mono);
+    font-stretch: 87.5%;
+    font-size: 0.8125rem;
+  }
+
+  .result :global(.card dl > div) {
+    display: grid;
+    grid-template-columns: 10rem minmax(0, 1fr);
+    gap: 1rem;
+    padding: 0.6rem 0;
+    border-top: 1px solid var(--line-soft);
+  }
+
+  .result :global(.card dt) {
+    font-size: 0.625rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--fg-2);
+    padding-top: 0.15rem;
+  }
+
+  .result :global(.card dd) {
+    margin: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .result :global(.card .rel) {
+    display: block;
+  }
+
+  .result :global(.card .rel + .rel) {
+    margin-top: 0.35rem;
+  }
+
+  .result :global(.card .tag) {
+    margin-right: 0.45rem;
+  }
+
+  .result :global(.error) {
+    padding: 1rem 1.25rem;
+    border: 1.5px dashed var(--signal);
+    font-family: var(--font-mono);
+    font-size: 0.8125rem;
+    margin: 0;
+    max-width: none;
+  }
+
+  .result :global(.summary) {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    margin: 0 0 1rem;
+    border: 1.5px solid var(--fg);
+  }
+
+  .result :global(.summary div) {
+    padding: 0.85rem 1rem;
+    border-right: 1px solid var(--line-soft);
+  }
+
+  .result :global(.summary div:last-child) {
+    border-right: 0;
+  }
+
+  .result :global(.summary dt) {
+    font-family: var(--font-mono);
+    font-size: 0.625rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--fg-2);
+  }
+
+  .result :global(.summary dd) {
+    margin: 0.2rem 0 0;
+    font-size: 2.25rem;
+    font-weight: 800;
+    font-stretch: 62%;
+    line-height: 1;
+  }
+
+  .result :global(.batch-actions) {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    margin-bottom: 1rem;
+  }
+
+  /* Carimbo ------------------------------------------------------------------- */
+
+  :global(.stamp) {
+    display: inline-block;
+    padding: 0.4em 0.7em 0.3em;
+    border: 3px solid currentColor;
+    font-family: var(--font-sans);
+    font-stretch: 70%;
+    font-weight: 900;
+    font-size: clamp(2rem, 4.5vw, 3.5rem);
+    line-height: 0.95;
+    letter-spacing: 0.01em;
+    text-transform: uppercase;
+    transform: rotate(-3deg);
+    transform-origin: left center;
+    white-space: nowrap;
+  }
+
+  :global(.stamp.small) {
+    font-size: 1rem;
+    border-width: 2px;
+    transform: rotate(-2deg);
+  }
+
+  :global(.stamp.listed) {
+    color: var(--signal-ink);
+    box-shadow: inset 0 0 0 2px var(--bg), inset 0 0 0 3px currentColor;
+  }
+
+  :global(.stamp.related) {
+    color: var(--signal-ink);
+    border-style: dashed;
+  }
+
+  :global(.stamp.excluded) {
+    color: var(--fg);
+    background-image: repeating-linear-gradient(-45deg, var(--line-soft) 0 2px, transparent 2px 7px);
+  }
+
+  :global(.stamp.clear) {
+    color: var(--fg);
+  }
+
+  :global(.stamp.invalid) {
+    color: var(--fg-2);
+    border-style: dotted;
+  }
+
+  :global(.stamp-wrap) {
+    padding-top: 0.5rem;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    :global(.stamp.is-new) {
+      animation: stamp 0.35s cubic-bezier(0.3, 1.6, 0.6, 1) both;
+    }
+  }
+
+  @keyframes stamp {
+    from {
+      opacity: 0;
+      transform: rotate(-3deg) scale(1.6);
+    }
+  }
+
+  .legend {
+    margin: 0;
+    border-top: 1.5px solid var(--fg);
+  }
+
+  .legend div {
+    display: grid;
+    grid-template-columns: 12rem minmax(0, 1fr);
+    gap: 1.5rem;
+    align-items: center;
+    padding: 1.1rem 0;
+    border-bottom: 1px solid var(--line-soft);
+  }
+
+  .legend dd {
+    margin: 0;
+    color: var(--fg-2);
+    max-width: 68ch;
+  }
+
+  @media (max-width: 760px) {
+    .prompt {
+      grid-template-columns: auto minmax(0, 1fr);
+    }
+
+    .prompt .btn {
+      grid-column: 1 / -1;
+    }
+
+    .result :global(.card) {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .result :global(.card dl > div) {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 0.25rem;
+    }
+
+    .result :global(.summary) {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .legend div {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 0.75rem;
+    }
+  }
+</style>

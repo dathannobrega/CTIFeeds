@@ -1,0 +1,116 @@
+---
+import '@fontsource-variable/archivo/wdth.css';
+import '@fontsource-variable/martian-mono/wdth.css';
+import '../styles/global.css';
+import Seo, { type Crumb } from '../components/Seo.astro';
+import Masthead from '../components/Masthead.astro';
+import Footer from '../components/Footer.astro';
+import { HTML_LANG, type Lang, type RouteKey } from '../i18n/routes.ts';
+import { clientStrings, t } from '../i18n/ui.ts';
+
+export interface Props {
+  lang: Lang;
+  title: string;
+  description: string;
+  path: string;
+  alternates?: Record<Lang, string> | null;
+  active?: RouteKey;
+  noindex?: boolean;
+  ogType?: 'website' | 'article';
+  jsonLd?: Record<string, unknown>[];
+  breadcrumbs?: Crumb[];
+}
+
+const { lang, alternates = null, active, breadcrumbs = [], ...seo } = Astro.props;
+const i18n = JSON.stringify(clientStrings(lang)).replaceAll('<', '\\u003c');
+---
+
+<!doctype html>
+<html lang={HTML_LANG[lang]} data-api="pending">
+  <head>
+    <Seo
+      lang={lang}
+      alternates={alternates}
+      breadcrumbs={breadcrumbs}
+      homeLabel={t(lang, 'breadcrumb.home')}
+      {...seo}
+    />
+    <slot name="head" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">{t(lang, 'skip')}</a>
+    <Masthead lang={lang} active={active} alternates={alternates} />
+    {
+      breadcrumbs.length > 0 && (
+        <nav class="crumbs wrap" aria-label="Breadcrumb">
+          <ol>
+            <li>
+              <a href={lang === 'pt' ? '/' : '/en/'}>{t(lang, 'breadcrumb.home')}</a>
+            </li>
+            {breadcrumbs.map((crumb, index) =>
+              index === breadcrumbs.length - 1 ? (
+                <li aria-current="page">{crumb.name}</li>
+              ) : (
+                <li>
+                  <a href={crumb.path}>{crumb.name}</a>
+                </li>
+              ),
+            )}
+          </ol>
+        </nav>
+      )
+    }
+    <main id="main" tabindex="-1">
+      <slot />
+    </main>
+    <Footer lang={lang} alternates={alternates} />
+    <script type="application/json" id="i18n" set:html={i18n} />
+    <script>
+      import { startLive } from '../scripts/live.ts';
+      import { initCopyButtons, initThemeToggle } from '../scripts/ui.ts';
+
+      initThemeToggle();
+      initCopyButtons();
+      startLive();
+    </script>
+  </body>
+</html>
+
+<style>
+  main:focus {
+    outline: none;
+  }
+
+  .crumbs {
+    padding-top: 1.25rem;
+  }
+
+  .crumbs ol {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem 0;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-family: var(--font-mono);
+    font-stretch: 87.5%;
+    font-size: 0.6875rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--fg-2);
+  }
+
+  .crumbs li + li::before {
+    content: '/';
+    margin: 0 0.6rem;
+    color: var(--signal-ink);
+  }
+
+  .crumbs a {
+    text-decoration: none;
+  }
+
+  .crumbs a:hover {
+    text-decoration: underline;
+  }
+</style>

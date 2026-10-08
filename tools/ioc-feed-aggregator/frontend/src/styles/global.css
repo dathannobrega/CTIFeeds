@@ -1,0 +1,544 @@
+/*
+ * cti[.]segark — sistema visual
+ * Papel e tinta, uma única cor de sinal (vermelhão). Grotesca condensada para títulos e números,
+ * monoespaçada para dados. Sem sombras, sem gradientes decorativos: fios de 1px, blocos chapados
+ * e hachuras para diferenciar categorias sem depender só de cor.
+ */
+
+:root {
+  color-scheme: light dark;
+  --font-sans: 'Archivo Variable', 'Archivo', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'Martian Mono Variable', ui-monospace, 'SFMono-Regular', 'Cascadia Mono', Menlo, monospace;
+
+  --max: 1440px;
+  --gutter: clamp(16px, 3.2vw, 44px);
+  --ease: cubic-bezier(0.2, 0.7, 0.1, 1);
+
+  /* Papel (claro) */
+  --bg: #eeebe3;
+  --bg-2: #e5e1d6;
+  --bg-3: #d8d3c5;
+  --fg: #14130f;
+  --fg-2: #56524a;
+  --fg-3: #8a857a;
+  --line: #14130f;
+  --line-soft: rgb(20 19 15 / 0.16);
+  --signal: #e5420f;
+  --signal-ink: #b2310a;
+  --on-signal: #14130f;
+  --inverse-bg: #14130f;
+  --inverse-bg-2: #22211c;
+  --inverse-fg: #eeebe3;
+  --inverse-fg-2: #a9a497;
+  --inverse-signal-ink: #ff6c35;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg: #0e0e0c;
+    --bg-2: #171714;
+    --bg-3: #24241f;
+    --fg: #ece8de;
+    --fg-2: #a8a397;
+    --fg-3: #6f6b61;
+    --line: #ece8de;
+    --line-soft: rgb(236 232 222 / 0.15);
+    --signal: #ff5a1f;
+    --signal-ink: #ff6c35;
+    --on-signal: #0e0e0c;
+    --inverse-bg: #ece8de;
+    --inverse-bg-2: #e0dbcf;
+    --inverse-fg: #0e0e0c;
+    --inverse-fg-2: #56524a;
+    --inverse-signal-ink: #b2310a;
+  }
+}
+
+:root[data-theme='dark'] {
+  --bg: #0e0e0c;
+  --bg-2: #171714;
+  --bg-3: #24241f;
+  --fg: #ece8de;
+  --fg-2: #a8a397;
+  --fg-3: #6f6b61;
+  --line: #ece8de;
+  --line-soft: rgb(236 232 222 / 0.15);
+  --signal: #ff5a1f;
+  --signal-ink: #ff6c35;
+  --on-signal: #0e0e0c;
+  --inverse-bg: #ece8de;
+  --inverse-bg-2: #e0dbcf;
+  --inverse-fg: #0e0e0c;
+  --inverse-fg-2: #56524a;
+  --inverse-signal-ink: #b2310a;
+}
+
+/* Base ------------------------------------------------------------------------ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  scroll-padding-top: 6rem;
+  background: var(--bg);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  font-size: 1.0625rem;
+  line-height: 1.55;
+  font-stretch: 100%;
+  font-kerning: normal;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+::selection {
+  background: var(--signal);
+  color: var(--on-signal);
+}
+
+a {
+  color: inherit;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.22em;
+  transition: text-decoration-color 0.15s;
+}
+
+a:hover {
+  text-decoration-color: var(--signal);
+}
+
+:focus-visible {
+  outline: 2px solid var(--signal);
+  outline-offset: 3px;
+}
+
+img,
+svg {
+  display: block;
+  max-width: 100%;
+}
+
+p {
+  margin: 0 0 1em;
+  max-width: 68ch;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  margin: 0;
+  font-weight: 800;
+  font-stretch: 72%;
+  line-height: 0.95;
+  letter-spacing: -0.005em;
+  text-transform: uppercase;
+  text-wrap: balance;
+}
+
+h1 {
+  font-size: clamp(2.25rem, 5.6vw, 4.75rem);
+}
+
+h2 {
+  font-size: clamp(1.9rem, 3.8vw, 3.1rem);
+}
+
+h3 {
+  font-size: clamp(1.3rem, 2vw, 1.6rem);
+  font-stretch: 80%;
+  line-height: 1.05;
+}
+
+strong {
+  font-weight: 700;
+}
+
+code,
+kbd,
+pre,
+samp {
+  font-family: var(--font-mono);
+  font-stretch: 87.5%;
+}
+
+:not(pre) > code {
+  font-size: 0.82em;
+  padding: 0.05em 0.35em;
+  background: var(--bg-2);
+  border: 1px solid var(--line-soft);
+  overflow-wrap: anywhere;
+}
+
+hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 0;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+/* Utilitários ----------------------------------------------------------------- */
+
+/* O atributo hidden vence qualquer display definido por classe. */
+[hidden] {
+  display: none !important;
+}
+
+.wrap {
+  width: 100%;
+  max-width: var(--max);
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+
+.visually-hidden {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.skip-link {
+  position: absolute;
+  left: var(--gutter);
+  top: -100px;
+  z-index: 100;
+  padding: 0.75rem 1rem;
+  background: var(--signal);
+  color: var(--on-signal);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  text-decoration: none;
+}
+
+.skip-link:focus {
+  top: 0.5rem;
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-stretch: 87.5%;
+}
+
+.kicker {
+  font-family: var(--font-mono);
+  font-stretch: 87.5%;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fg-2);
+}
+
+.lede {
+  font-size: clamp(1.125rem, 1.6vw, 1.375rem);
+  line-height: 1.45;
+  max-width: 46ch;
+  text-wrap: pretty;
+}
+
+.muted {
+  color: var(--fg-2);
+}
+
+.signal {
+  color: var(--signal-ink);
+}
+
+.prose > * + * {
+  margin-top: 1rem;
+}
+
+.prose p,
+.prose li {
+  max-width: 68ch;
+  text-wrap: pretty;
+}
+
+.prose ul,
+.prose ol {
+  padding-left: 1.25rem;
+  margin: 0;
+}
+
+.prose li + li {
+  margin-top: 0.45rem;
+}
+
+.prose li::marker {
+  font-family: var(--font-mono);
+  font-size: 0.8em;
+  color: var(--signal-ink);
+}
+
+/* Botões ---------------------------------------------------------------------- */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75em;
+  min-height: 2.75rem;
+  padding: 0.7em 1.15em;
+  border: 1.5px solid var(--fg);
+  background: transparent;
+  color: var(--fg);
+  font-family: var(--font-mono);
+  font-stretch: 87.5%;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  line-height: 1.1;
+  text-transform: uppercase;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    background-color 0.15s var(--ease),
+    color 0.15s var(--ease),
+    border-color 0.15s var(--ease);
+}
+
+.btn:hover {
+  background: var(--fg);
+  color: var(--bg);
+}
+
+.btn--solid {
+  background: var(--fg);
+  color: var(--bg);
+}
+
+.btn--solid:hover {
+  background: var(--signal);
+  border-color: var(--signal);
+  color: var(--on-signal);
+}
+
+.btn--signal {
+  background: var(--signal);
+  border-color: var(--signal);
+  color: var(--on-signal);
+}
+
+.btn--signal:hover {
+  background: var(--fg);
+  border-color: var(--fg);
+  color: var(--bg);
+}
+
+.btn--small {
+  min-height: 2.25rem;
+  padding: 0.5em 0.8em;
+  font-size: 0.6875rem;
+}
+
+.btn[disabled] {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.btn .arrow {
+  font-family: var(--font-sans);
+  font-size: 1.15em;
+  transition: transform 0.2s var(--ease);
+}
+
+.btn:hover .arrow {
+  transform: translateX(3px);
+}
+
+/* Etiquetas de tipo ----------------------------------------------------------- */
+
+.tag {
+  display: inline-block;
+  min-width: 3.4em;
+  padding: 0.28em 0.45em 0.22em;
+  border: 1.5px solid var(--fg);
+  font-family: var(--font-mono);
+  font-stretch: 87.5%;
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  line-height: 1.15;
+  text-align: center;
+  text-transform: uppercase;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.tag--url {
+  background: var(--signal);
+  border-color: var(--signal);
+  color: var(--on-signal);
+}
+
+.tag--domain {
+  background: var(--fg);
+  color: var(--bg);
+}
+
+.tag--ipv4 {
+  background: transparent;
+  color: var(--fg);
+}
+
+/* Bloco invertido (tinta sobre papel vira papel sobre tinta). */
+.inverse {
+  --fg: var(--inverse-fg);
+  --fg-2: var(--inverse-fg-2);
+  --bg: var(--inverse-bg);
+  --bg-2: var(--inverse-bg-2);
+  --line: var(--inverse-fg);
+  --signal-ink: var(--inverse-signal-ink);
+  background: var(--bg);
+  color: var(--fg);
+}
+
+/* Hachura usada para IPv4 e para estados "obsoleto". */
+.hatch {
+  background-image: repeating-linear-gradient(-45deg, var(--fg) 0 1.5px, transparent 1.5px 6px);
+}
+
+/* Formulários ----------------------------------------------------------------- */
+
+.field {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.field label,
+.field .label {
+  font-family: var(--font-mono);
+  font-stretch: 87.5%;
+  font-size: 0.6875rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fg-2);
+}
+
+.input {
+  width: 100%;
+  min-height: 3rem;
+  padding: 0.65rem 0.85rem;
+  border: 1.5px solid var(--fg);
+  border-radius: 0;
+  background: var(--bg);
+  font-family: var(--font-mono);
+  font-stretch: 87.5%;
+  font-size: 0.9375rem;
+  appearance: none;
+}
+
+.input::placeholder {
+  color: var(--fg-3);
+}
+
+.input:focus-visible {
+  outline: 2px solid var(--signal);
+  outline-offset: 0;
+}
+
+textarea.input {
+  min-height: 12rem;
+  resize: vertical;
+  line-height: 1.6;
+}
+
+/* Tabela de dados ------------------------------------------------------------- */
+
+.table-scroll {
+  width: 100%;
+  overflow-x: auto;
+  border-top: 1.5px solid var(--fg);
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-mono);
+  font-stretch: 87.5%;
+  font-size: 0.75rem;
+}
+
+.data-table th {
+  padding: 0.7rem 0.75rem;
+  border-bottom: 1px solid var(--line);
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-align: left;
+  text-transform: uppercase;
+  color: var(--fg-2);
+  white-space: nowrap;
+}
+
+.data-table td {
+  padding: 0.7rem 0.75rem;
+  border-bottom: 1px solid var(--line-soft);
+  vertical-align: top;
+}
+
+.data-table td.num,
+.data-table th.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.data-table tbody tr:hover {
+  background: var(--bg-2);
+}
+
+.data-table .value {
+  overflow-wrap: anywhere;
+}
+
+/* Estado ao vivo -------------------------------------------------------------- */
+
+[data-stat] {
+  font-variant-numeric: tabular-nums;
+}
+
+.placeholder {
+  color: var(--fg-3);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
