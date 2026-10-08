@@ -18,7 +18,7 @@ RUN npm run build \
     && find dist -type f \( -name '*.html' -o -name '*.css' -o -name '*.js' -o -name '*.svg' \
        -o -name '*.xml' -o -name '*.txt' -o -name '*.webmanifest' \) -exec gzip -9 -k {} +
 
-FROM nginxinc/nginx-unprivileged:1.28-alpine
+FROM nginxinc/nginx-unprivileged:1.31-alpine
 
 ENV API_UPSTREAM=web:5000 \
     API_RATE_LIMIT=10r/s \
